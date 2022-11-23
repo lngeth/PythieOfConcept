@@ -24,6 +24,7 @@ int t(char* m, char* w) {
   return count;
 }
 
+/*
 int score(char* w, char* m, char list_concept[][255], char* list_word[][NB_CONCEPT+1]) {
   int position_w = 0;
   for (int i = 0; i < NB_CONCEPT; i++) {
@@ -39,6 +40,7 @@ int score(char* w, char* m, char list_concept[][255], char* list_word[][NB_CONCE
   }
   return 0;
 }
+*/
 
 struct mot {
   char* v;
@@ -71,16 +73,7 @@ int main(void) {
     // variables
     int NJ, J, ST;
 
-    // Liste de mot (1000) avec les scores associés au concepts
-    char* list_word[NB_WORD][NB_CONCEPT+1];
-    for (int i = 0; i < NB_WORD; i++) {
-      for (int j = 0; j < NB_CONCEPT+1; j++) {
-        list_word[i][j] = malloc(255 * sizeof(char));
-      }
-    }
-
     // Liste totale des concepts
-    char list_concept[NB_CONCEPT][255];
 
     // liste de concept à chaque tour donné par la déesse
     char* list_turn_concept[NB_TURN];
@@ -143,20 +136,22 @@ int main(void) {
     fflush(stderr);
 
 
-    for (int i = 1; i < NB_CONCEPT+1; i++) {
+    // Récupération de tous les concepts
+    for (int i = 0; i < NB_CONCEPT; i++) {
         memset(line, 0, 255);
         scanf("%s", line);
 
-        sscanf(line, "%s", list_concept[i-1]);
-        // fprintf(stderr, "concept numéro %d : %s\n", i, list_concept[i-1]);
-        // fflush(stderr);
+        // ajout des concepts dans chaque mot
+        for (int j = 0; j < NB_WORD; j++) {
+          sscanf(line, "%s", liste_mot[j].concepts[i]);
+        }
     }
 
+    // Récupération de tous les mots
     for (int i = 0; i < NB_WORD; i++) {
 
         memset(line, 0, 255);
         scanf("%s", line);
-        sscanf(line, "%s", list_word[i][0]);
 
         // dans le struct
         sscanf(line, "%s", liste_mot[i].v);
@@ -166,23 +161,10 @@ int main(void) {
         for (int j = 1; j < NB_CONCEPT+1; j++) {
           memset(line, 0, 255);
           scanf("%s", line);
-          sscanf(line, "%s", list_word[i][j]);
 
           // dans le struct
           sscanf(line, "%d", &liste_mot[i].score[j-1]);
-
-          /*
-          fprintf(stderr, "mot '%s' ; score %d : %s\n",list_word[i][0], j, list_word[i][j]);
-          fflush(stderr);
-          */
         }
-    }
-
-    // ajout des concepts dans chaque mot
-    for (int i = 0; i < NB_WORD; i++) {
-      for (int j = 0; j < NB_CONCEPT; j++) {
-        liste_mot[i].concepts[j] = list_concept[j];
-      }
     }
 
 
@@ -405,7 +387,34 @@ int main(void) {
     }
 
     // Free the malloc
+    // liste de concept à chaque tour donné par la déesse
+    for (int i = 0; i < NB_TURN; i++) {
+      free(list_turn_concept[i]);
+    }
+
+    // Test struct mot
+    for (int i = 0; i < NB_WORD; i++) {
+      free(liste_mot[i].v);
+      for (int j = 0; j < NB_CONCEPT; j++) {
+        free(liste_mot[i].concepts[j]);
+      }
+    }
+
+    // liste de mot qui change au cours d'une manche
+    for (int i = 0; i < NB_WORD; i++) {
+      free(liste_mot_candidat[i].v);
+      for (int j = 0; j < NB_CONCEPT; j++) {
+        free(liste_mot_candidat[i].concepts[j]);
+      }
+    }
+
+    // liste initiale avec tous les mots
+    for (int i = 0; i < NB_WORD; i++) {
+      free(liste_mot_initiale[i].v);
+      for (int j = 0; j < NB_CONCEPT; j++) {
+        free(liste_mot_initiale[i].concepts[j]);
+      }
+    }
 
     return 0;
-
 }

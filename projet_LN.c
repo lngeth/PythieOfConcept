@@ -55,6 +55,15 @@ struct joueur {
   int ST;
 };
 
+struct param_goddess {
+  int p;
+  int q;
+  int p_founded; // status to know if p is founded or not
+  int a;
+  int b;
+  int c;
+};
+
 /* Méthode pour les tableaux */
 
 int is_char_in_range(char* c, int a, int b, char* tab[]) {
@@ -68,10 +77,18 @@ int is_char_in_range(char* c, int a, int b, char* tab[]) {
 
 /* FIN Méthode tableaux */
 
+/* Méthode d'affichage */
+
+/* FIN Méthode d'affichage */
+
 
 int main(void) {
     // variables
     int NJ, J, ST;
+    struct param_goddess goddess;
+    goddess.p = 3;
+    goddess.q = 7;
+    goddess.p_founded = 1;
 
     // Liste totale des concepts
 
@@ -227,7 +244,7 @@ int main(void) {
 
     // every round
     for (int manche = 0; manche < 5; manche++) {
-      fprintf(stderr, "début de manche n°%d\n", manche);
+      fprintf(stderr, "début de manche hehehehn°%d\n", manche);
       fflush(stderr);
 
 
@@ -247,6 +264,38 @@ int main(void) {
       int counter_concept_recup = 0;
       int is_tous_trouve = 0;
       int me_trouve = 0;
+      int has_proposed = 0;
+
+
+      fprintf(stderr, "On a trouvé p : %d\n", goddess.p);
+      fflush(stderr);
+
+
+      /*
+      // Si manche == 1 et on a pas encore trouvé le p, on peut le deviner
+      if (manche == 1 && goddess.p_founded == 1) { // TODO : à optimiser
+        for (int i = 0; i < 20; i++) {
+          int position = 0;
+          for (int j = 0; j < NB_CONCEPT; j++) {
+            if (strcmp(list_turn_concept[i], liste_mot[0].concepts[j])) {
+              position = j;
+              break;
+            }
+          }
+          if (position < 7) {
+            if (goddess.p > position) {
+              goddess.p = position;
+            }
+          }
+        }
+
+        goddess.q = goddess.p;
+        goddess.p_founded = 0;
+
+        fprintf(stderr, "Je devine p : %d\n", goddess.p);
+        fflush(stderr);
+      }
+      */
 
       while(is_tous_trouve == 0) {
         fprintf(stderr, "Tour n°%d\n", tour);
@@ -259,101 +308,137 @@ int main(void) {
           sscanf(line, "%s", list_turn_concept[counter_concept_recup]); // mot concept à chaque tour
           fprintf(stderr, "Récupération mot : %s\n", list_turn_concept[counter_concept_recup]);
           fflush(stderr);
+
+
+          /*
+          // Si on est à la manche 1 : on trouve plus facilement p si le concept est à la 7ème ou 33ème position
+          if (manche == 0) {
+            if (strcmp(list_turn_concept[counter_concept_recup], liste_mot[0].concepts[6])) {
+              goddess.p = 3;
+              goddess.q = 3;
+              goddess.p_founded = 0;
+            } else if (strcmp(list_turn_concept[counter_concept_recup], liste_mot[0].concepts[32])) {
+              goddess.p = 7;
+              goddess.q = 7;
+              goddess.p_founded = 0;
+            }
+          }
+          */
         } // fin récupération concept
 
-        // Si j'ai pas trouvé le mot ==> Algo()
-        if (liste_joueur[0].ST == 1) {
-          // Algo()
-          int count_possible_word = 0;
 
-          for (int i = 0; i < taille_mot_candidat; i++) {
-            // fprintf(stderr, "Analyse du mot %s\n", liste_mot[i].v);
-            //fflush(stderr);
-            int partie_basse = 0;
+        // Si j'ai proposé quelque chose
+        if (has_proposed == 1 && liste_joueur[0].ST == 1) {
+          has_proposed = 0;
+          fprintf(stderr, "J'ai proposé un truc faux frérot : %s \n!!!!", liste_mot[0].v);
+          fflush(stderr);
+          fprintf(stderr, "Du coup je Guess l'autre mot : %s \n!!!!", liste_mot[1].v);
+          fflush(stderr);
+          fprintf(stdout, "GUESS %s\n", liste_mot[1].v);
+          fflush(stdout);
+        } else { // si j'ai pas proposé quelque chose
+          // Si j'ai pas trouvé le mot ==> Algo()
+          if (liste_joueur[0].ST == 1) {
+            // Algo()
+            int count_possible_word = 0;
 
-            for (int j = 0; j < 7; j++) {
+            for (int i = 0; i < taille_mot_candidat; i++) {
+              // fprintf(stderr, "Analyse du mot %s\n", liste_mot[i].v);
+              //fflush(stderr);
 
-              if (strcmp(list_turn_concept[counter_concept_recup],liste_mot[i].concepts[j]) == 0) {
-                partie_basse = 1;
-                break;
-              }
-            }
-
-            int partie_haute = 0;
-            if (partie_basse == 0) {
-              for (int j = 33; j < NB_CONCEPT; j++) {
+              int partie_basse = 0;
+              for (int j = 0; j < 10-goddess.p; j++) {
 
                 if (strcmp(list_turn_concept[counter_concept_recup],liste_mot[i].concepts[j]) == 0) {
-                  // fprintf(stderr, "%s dans les 7 derniers\n", liste_mot[i].v);
-                  // fflush(stderr);
-                  partie_haute = 1;
+                  partie_basse = 1;
                   break;
+                }
+              }
+
+              int partie_haute = 0;
+              if (partie_basse == 0) {
+                for (int j = NB_CONCEPT - (10 + goddess.q); j < NB_CONCEPT; j++) {
+
+                  if (strcmp(list_turn_concept[counter_concept_recup], liste_mot[i].concepts[j]) == 0) {
+                    // fprintf(stderr, "%s dans les 7 derniers\n", liste_mot[i].v);
+                    // fflush(stderr);
+                    partie_haute = 1;
+                    break;
+                  }
+                }
+              }
+
+              if (partie_basse == 1 || partie_haute == 1) {
+                liste_mot_candidat[count_possible_word].v = liste_mot[i].v;
+                for (int j = 0; j < NB_CONCEPT; j++) {
+                  liste_mot_candidat[count_possible_word].concepts[j] = liste_mot[i].concepts[j];
+                  liste_mot_candidat[count_possible_word].score[j] = liste_mot[i].score[j];
+                }
+                count_possible_word++;
+              }
+            }
+            for (int i = 0; i < count_possible_word; i++) {
+              fprintf(stderr, "mot n°%d : %s\n",i +1, liste_mot_candidat[i].v);
+              fflush(stderr);
+            }
+            taille_mot_candidat = count_possible_word;
+
+            // change the original list by the new one
+            // liste_mot = liste_mot_candidat; // marche pas
+            for (int i = 0; i < NB_WORD; i++) {
+              if (i < count_possible_word) {
+                liste_mot[i].v = liste_mot_candidat[i].v;
+                for (int j = 0; j < NB_CONCEPT; j++) {
+                  liste_mot[i].concepts[j] = liste_mot_candidat[i].concepts[j];
+                  liste_mot[i].score[j] = liste_mot_candidat[i].score[j];
+                }
+              } else {
+                liste_mot[i].v = "";
+                for (int j = 0; j < NB_CONCEPT; j++) {
+                  liste_mot[i].concepts[j] = "";
+                  liste_mot[i].score[j] = 0;
                 }
               }
             }
 
-            if (partie_basse == 1 || partie_haute == 1) {
-              liste_mot_candidat[count_possible_word].v = liste_mot[i].v;
-              for (int j = 0; j < NB_CONCEPT; j++) {
-                liste_mot_candidat[count_possible_word].concepts[j] = liste_mot[i].concepts[j];
-                liste_mot_candidat[count_possible_word].score[j] = liste_mot[i].score[j];
-              }
-              count_possible_word++;
-            }
-          }
-          for (int i = 0; i < count_possible_word; i++) {
-            fprintf(stderr, "mot n°%d : %s\n",i +1, liste_mot_candidat[i].v);
+            fprintf(stderr, "On a récup %d\n", count_possible_word);
             fflush(stderr);
-          }
-          taille_mot_candidat = count_possible_word;
 
-          // change the original list by the new one
-          // liste_mot = liste_mot_candidat; // marche pas
-          for (int i = 0; i < NB_WORD; i++) {
-            if (i < count_possible_word) {
-              liste_mot[i].v = liste_mot_candidat[i].v;
-              for (int j = 0; j < NB_CONCEPT; j++) {
-                liste_mot[i].concepts[j] = liste_mot_candidat[i].concepts[j];
-                liste_mot[i].score[j] = liste_mot_candidat[i].score[j];
-              }
+
+            if (taille_mot_candidat == 2) {
+              fprintf(stderr, "Je Guess : %s \n!!!!", liste_mot[0].v);
+              fflush(stderr);
+              fprintf(stdout, "GUESS %s\n", liste_mot[0].v);
+              fflush(stdout);
+              has_proposed = 1;
+            } else if (taille_mot_candidat == 1) {
+              fprintf(stderr, "Je Guess : %s \n!!!!", liste_mot[0].v);
+              fflush(stderr);
+              fprintf(stdout, "GUESS %s\n", liste_mot[0].v);
+              fflush(stdout);
             } else {
-              liste_mot[i].v = "";
-              for (int j = 0; j < NB_CONCEPT; j++) {
-                liste_mot[i].concepts[j] = "";
-                liste_mot[i].score[j] = 0;
-              }
+              fprintf(stderr, "Je passe !!!\n");
+              fflush(stderr);
+              fprintf(stdout, "PASS\n");
+              fflush(stdout);
             }
-          }
 
-          fprintf(stderr, "On a récup %d\n", count_possible_word);
-          fflush(stderr);
-
-          if (taille_mot_candidat == 1) {
-            fprintf(stderr, "Je Guess : %s \n!!!!", liste_mot[0].v);
-            fflush(stderr);
-            fprintf(stdout, "GUESS %s\n", liste_mot[0].v);
-            fflush(stdout);
-          } else {
-            fprintf(stderr, "Je passe !!!\n");
-            fflush(stderr);
-            fprintf(stdout, "PASS\n");
-            fflush(stdout);
-          }
-
-          counter_concept_recup++;
-        } // Fin si j'ai pas trouvé le mot
-        else {
-          // Si j'ai trouvé le mot
-          if (me_trouve != 1) { // Affecte qu'une fois le changement à trouvé
-            me_trouve = 1;
-          }
-          if (tour < 21) {
-            fprintf(stderr, "Je passe !!!\n");
-            fflush(stderr);
-            fprintf(stdout, "PASS\n");
-            fflush(stdout);
+            counter_concept_recup++;
+          } // Fin si j'ai pas trouvé le mot
+          else {
+            // Si j'ai trouvé le mot
+            if (me_trouve != 1) { // Affecte qu'une fois le changement à trouvé
+              me_trouve = 1;
+            }
+            if (tour < 21) {
+              fprintf(stderr, "Je passe !!!\n");
+              fflush(stderr);
+              fprintf(stdout, "PASS\n");
+              fflush(stdout);
+            }
           }
         }
+
         tour++;
 
         // Récupération informations joueurs restants et ce qu'ils ont proposés

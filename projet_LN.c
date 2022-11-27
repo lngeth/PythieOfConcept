@@ -14,9 +14,17 @@
 /* TODO */
 // Factoriser les méthodes de récupération des données
 // Gérer le cas où des personnes sont éliminés ==> sinon mauvaise récupération des données et erreur
+// optimiser les mallocs (taille des mots & concepts)
+// vérifier que tous les mallocs sont free()
 
 
 /* BEGIN Struct */
+struct game_param {
+  int NJ;
+  int J;
+  int END;
+};
+
 struct mot {
   char* v;
   char* concepts[NB_CONCEPT];
@@ -60,6 +68,8 @@ void print_pass() {
 }
 
 void guess_word(char* word) {
+  fprintf(stderr, "Je Guess : %s \n!!!!", word);
+  fflush(stderr);
   fprintf(stdout, "GUESS %s\n", word);
   fflush(stdout);
 }
@@ -68,6 +78,38 @@ void guess_word(char* word) {
 
 
 /* BEGIN Retrieve game infos methods */
+
+void get_every_words_and_concepts() {
+  char* line;
+
+  // get the 50 concepts
+  for (int i = 0; i < NB_CONCEPT; i++) {
+    // memset(line, 0, 255);
+    scanf("%s", line);
+
+    // add each concept in every word
+    for (int j = 0; j < NB_WORD; j++) {
+      sscanf(line, "%s", liste_mot[j].concepts[i]);
+    }
+  }
+
+  // Récupération de tous les mots
+  for (int i = 0; i < NB_WORD; i++) {
+    // memset(line, 0, 255);
+    scanf("%s", line);
+    sscanf(line, "%s", liste_mot[i].v);
+
+    // fprintf(stderr, "Récupération mot : %s\n", line);
+    // fflush(stderr);
+    for (int j = 1; j < NB_CONCEPT+1; j++) {
+      // memset(line, 0, 255);
+      scanf("%s", line);
+
+      // dans le struct
+      sscanf(line, "%d", &liste_mot[i].score[j-1]);
+    }
+  }
+}
 
 /* END Retrieve game infos methods */
 
@@ -81,6 +123,15 @@ int is_char_in_range(char* c, int a, int b, char* tab[]) {
     }
   }
   return false;
+}
+
+void print_concepts_words_list() {
+  for (int i = 0; i < NB_WORD; i++) {
+    for (int j = 0; j < NB_CONCEPT; j++) {
+      fprintf(stderr, "mot : %s, con : %s et s : %d\n", liste_mot[i].v, liste_mot[i].concepts[j], liste_mot[i].score[j]);
+      fflush(stderr);
+    }
+  }
 }
 
 /* END Methods for array manipulation */
@@ -238,25 +289,92 @@ void reduce_possible_list_with_concept(int* taille_mot_candidat, int counter_con
   }
 }
 
+// TODO : A optimiser en recherche dichotomique
+int find_word_position(char* word) {
+  for (int i = 0; i < NB_WORD; i++) {
+    if (strcmp(word, liste_mot_initiale[i].v) == 0) {
+      fprintf(stderr, "secret w : %s\n", liste_mot_initiale[i].v);
+      fflush(stderr);
+      return i;
+    }
+  }
+}
+
+void algo_find_p(char* secret_word) { // TODO : A optimiser
+  int sw_pos = find_word_position(secret_word);
+  int tab[NB_CONCEPT] = {0};
+
+  fprintf(stderr, "secret wooord : %s\n", secret_word);
+  fflush(stderr);
+
+  fprintf(stderr, "secret wooord dans liste initi : %s\n", liste_mot_initiale[sw_pos].v);
+  fflush(stderr);
+
+  for (int i = 0; i < NB_CONCEPT; i++) {
+    fprintf(stderr, "concept du mot :%s\n", liste_mot_initiale[sw_pos].concepts[i]);
+    fflush(stderr);
+
+  }
+
+  // Si on est à la manche 1 : on trouve plus facilement p si le concept est à la 7ème ou 33ème position
+  for (int i = 0; i < NB_TURN; i++) {
+    int founded = 0;
+
+    for (int j = 0; j < NB_CONCEPT; j++) {
+      if (strcmp(list_turn_concept[i], liste_mot_initiale[sw_pos].concepts[j]) == 0) {
+        tab[j] = 1;
+      }
+    }
+  }
+
+  // print tab
+  fprintf(stderr, "[");
+  fflush(stderr);
+  for (int i = 0; i < NB_CONCEPT; i++) {
+    fprintf(stderr, "%d, ", tab[i]);
+    fflush(stderr);
+  }
+  fprintf(stderr, "]\n");
+  fflush(stderr);
+
+
+  int count = 0;
+  for (int i = 0; i < 10 - goddess.p; i++) {
+    if (tab[i] == 1)
+      count++;
+    else
+      break;
+  }
+
+  goddess.p = 10 - count;
+  goddess.q = 10 - count;
+  goddess.p_founded = 1;
+}
+
 /* END Methods for game's array */
 
 
 /* BEGIN Decision methods */
 
-void print_decision(int taille_mot_candidat, int* has_proposed) {
-  if (taille_mot_candidat == 2) {
-    // fprintf(stderr, "Je Guess : %s \n!!!!", liste_mot[0].v);
-    // fflush(stderr);
-    guess_word(liste_mot[0].v);
-    *has_proposed = 1;
-  } else if (taille_mot_candidat == 1) {
-    // fprintf(stderr, "Je Guess : %s \n!!!!", liste_mot[0].v);
-    // fflush(stderr);
-    guess_word(liste_mot[0].v);
-  } else {
-    // fprintf(stderr, "Je passe !!!\n");
-    // fflush(stderr);
+void print_decision(int taille_mot_candidat, int* has_proposed, char** word_proposed, int manche, int tour) {
+  if (manche == 0 && tour < 20) { // Get all the concept first
+    fprintf(stderr, "Je passe !!!\n");
+    fflush(stderr);
     print_pass();
+  } else {
+    if (taille_mot_candidat == 2) {
+      *word_proposed = liste_mot[0].v;
+      guess_word(liste_mot[0].v);
+      *has_proposed = 1;
+    } else if (taille_mot_candidat == 1) {
+      *word_proposed = liste_mot[0].v;
+      guess_word(liste_mot[0].v);
+      *has_proposed = 1;
+    } else {
+      fprintf(stderr, "Je passe !!!\n");
+      fflush(stderr);
+      print_pass();
+    }
   }
 }
 
@@ -269,7 +387,7 @@ void init_global_variables() {
   // Init goddess params
   goddess.p = 3;
   goddess.q = 7;
-  goddess.p_founded = 1;
+  goddess.p_founded = 0;
 
   // Init arrays
   for (int i = 0; i < NB_TURN; i++) {
@@ -330,7 +448,8 @@ void free_global_variables() {
 
 int main(void) {
     // variables
-    int NJ, J, ST;
+    int J, ST;
+    struct game_param game;
 
 
     // Liste totale des concepts
@@ -341,49 +460,16 @@ int main(void) {
     int taille_mot_candidat = NB_WORD;
 
     // Initialisation phase:
-    char line[255]; // to optimize
+    char* line = malloc(255 * sizeof(char)); // to optimize
 
-    memset(line, 0, 255);
-    scanf("%[^\n]s", line);
-    // fprintf(stderr, "%s\n", line);
-    // fflush(stderr);
-    // First line
-    sscanf(line, "%d %d", &NJ, &J);
-    // fprintf(stderr, "Recu : %s\n", *line);
-    // fprintf(stderr, "Nombre de joueur : %d; Mon numéro de pythie : %d\n", NJ, J);
-    //fflush(stderr);
+    // get game infos
+    scanf(" %[^\n]s\n", line);
+    sscanf(line, "%d %d", &game.NJ, &game.J);
+    fprintf(stderr, "Récup game infos : %s\n", line);
+    fflush(stderr);
 
-
-    // Récupération de tous les concepts
-    for (int i = 0; i < NB_CONCEPT; i++) {
-        memset(line, 0, 255);
-        scanf("%s", line);
-
-        // ajout des concepts dans chaque mot
-        for (int j = 0; j < NB_WORD; j++) {
-          sscanf(line, "%s", liste_mot[j].concepts[i]);
-        }
-    }
-
-    // Récupération de tous les mots
-    for (int i = 0; i < NB_WORD; i++) {
-
-        memset(line, 0, 255);
-        scanf("%s", line);
-
-        // dans le struct
-        sscanf(line, "%s", liste_mot[i].v);
-
-        // fprintf(stderr, "Récupération mot : %s\n", line);
-        // fflush(stderr);
-        for (int j = 1; j < NB_CONCEPT+1; j++) {
-          memset(line, 0, 255);
-          scanf("%s", line);
-
-          // dans le struct
-          sscanf(line, "%d", &liste_mot[i].score[j-1]);
-        }
-    }
+    // get every words & concepts
+    get_every_words_and_concepts();
 
 
     // trie concept ordre croissant du score ===> tri à bulle
@@ -398,76 +484,69 @@ int main(void) {
       }
     }
 
-    /*
-    // Affichage struct
-    for (int i = 0; i < NB_WORD; i++) {
-      for (int j = 0; j < NB_CONCEPT; j++) {
-        fprintf(stderr, "mot : %s, con : %s et s : %d\n", liste_mot[i].v, liste_mot[i].concepts[j], liste_mot[i].score[j]);
-        fflush(stderr);
-      }
-    }
-    */
+    // print_concepts_words_list(); // Check words & concepts associated
 
-    struct joueur liste_joueur[NJ]; // array of player's struct
+    struct joueur liste_joueur[game.NJ]; // array of player's struct
 
+    // BEGIN GAME
     // every round
     for (int manche = 0; manche < 5; manche++) {
-      fprintf(stderr, "début de manche hehehehn°%d\n", manche);
-      fflush(stderr);
+      if (manche == 0) {
+        fprintf(stderr, "début de manche hehehehn°%d\n", manche);
+        fflush(stderr);
 
 
-      // Récupération information de début de manche
-      for (int nb_player = 0; nb_player < NJ; nb_player++) {
-        scanf("%d %d %d", &liste_joueur[nb_player].J, &liste_joueur[nb_player].P, &liste_joueur[nb_player].END);
+        // Récupération information de début de manche
+        for (int nb_player = 0; nb_player < game.NJ; nb_player++) {
+          int J, P, END;
 
-        if (liste_joueur[nb_player].END == 1) {
-          liste_joueur[nb_player].ST = 1;
+          scanf(" %[^\n]s\n", line);
+          sscanf(line, "%d %d %d", &J, &P, &END);
+          fprintf(stderr, "Récup toute la ligne : %s\n", line);
+          fflush(stderr);
+
+          liste_joueur[J].J = J;
+          liste_joueur[J].P = P;
+          liste_joueur[J].END = END;
+
+          fprintf(stderr, "Récup Joueur J, P, END : %d %d %d\n", J, P, END);
+          fflush(stderr);
+
+
+          // scanf("%d %d %d", &liste_joueur[nb_player].J, &liste_joueur[nb_player].P, &liste_joueur[nb_player].END);
+
+          if (liste_joueur[J].END == 1) {
+            liste_joueur[J].ST = 1;
+          }
         }
 
-        // fprintf(stderr, "Joueur %d, points = %d, sortie ? %d\n", liste_joueur[nb_player].J, liste_joueur[nb_player].P, liste_joueur[nb_player].ST);
-        // fflush(stderr);
+        for (int nb_player = 0; nb_player < game.NJ; nb_player++) {
+          fprintf(stderr, "Joueur %d, points = %d, sortie ? %d\n", liste_joueur[nb_player].J, liste_joueur[nb_player].P, liste_joueur[nb_player].ST);
+          fflush(stderr);
+        }
       }
+
+      fprintf(stderr, "deviner p ::: %d\n", goddess.p);
+      fflush(stderr);
+      fprintf(stderr, "deviner q ::: %d\n", goddess.q);
+      fflush(stderr);
+
 
       int tour = 1;
       int counter_concept_recup = 0;
       int is_tous_trouve = 0;
       int me_trouve = 0;
       int has_proposed = 0;
+      int is_player_removed = 0;
+      char* word_proposed = malloc(255 * sizeof(char));
 
 
       // fprintf(stderr, "On a trouvé p : %d\n", goddess.p);
       // fflush(stderr);
 
-
-      /*
-      // Si manche == 1 et on a pas encore trouvé le p, on peut le deviner
-      if (manche == 1 && goddess.p_founded == 1) { // TODO : à optimiser
-        for (int i = 0; i < 20; i++) {
-          int position = 0;
-          for (int j = 0; j < NB_CONCEPT; j++) {
-            if (strcmp(list_turn_concept[i], liste_mot[0].concepts[j])) {
-              position = j;
-              break;
-            }
-          }
-          if (position < 7) {
-            if (goddess.p > position) {
-              goddess.p = position;
-            }
-          }
-        }
-
-        goddess.q = goddess.p;
-        goddess.p_founded = 0;
-
-        fprintf(stderr, "Je devine p : %d\n", goddess.p);
+      while(is_tous_trouve == 0 || tour < 21) {
+        fprintf(stderr, "Tour n°%d\n", tour);
         fflush(stderr);
-      }
-      */
-
-      while(is_tous_trouve == 0) {
-        // fprintf(stderr, "Tour n°%d\n", tour);
-        // fflush(stderr);
 
         if (tour < 21) {
           // Récupération du concept
@@ -475,49 +554,33 @@ int main(void) {
           scanf("%s", line);
           sscanf(line, "%s", list_turn_concept[counter_concept_recup]); // mot concept à chaque tour
           counter_concept_recup++;
-          // fprintf(stderr, "Récupération mot : %s\n", list_turn_concept[counter_concept_recup]);
-          // fflush(stderr);
-
-
-          /*
-          // Si on est à la manche 1 : on trouve plus facilement p si le concept est à la 7ème ou 33ème position
-          if (manche == 0) {
-            if (strcmp(list_turn_concept[counter_concept_recup], liste_mot[0].concepts[6])) {
-              goddess.p = 3;
-              goddess.q = 3;
-              goddess.p_founded = 0;
-            } else if (strcmp(list_turn_concept[counter_concept_recup], liste_mot[0].concepts[32])) {
-              goddess.p = 7;
-              goddess.q = 7;
-              goddess.p_founded = 0;
-            }
-          }
-          */
+          fprintf(stderr, "Récupération mot : %s\n", list_turn_concept[counter_concept_recup-1]);
+          fflush(stderr);
         } // fin récupération concept
 
 
         // Si j'ai proposé quelque chose
-        if (has_proposed == 1 && liste_joueur[0].ST == 1) {
+        if (has_proposed == 1 && me_trouve == 0) {
           has_proposed = 0;
-          // fprintf(stderr, "J'ai proposé un truc faux frérot : %s \n!!!!", liste_mot[0].v);
-          // fflush(stderr);
-          // fprintf(stderr, "Du coup je Guess l'autre mot : %s \n!!!!", liste_mot[1].v);
-          // fflush(stderr);
+          fprintf(stderr, "J'ai proposé un truc faux frérot : %s \n!!!!", liste_mot[0].v);
+          fflush(stderr);
+          fprintf(stderr, "Du coup je Guess l'autre mot : %s \n!!!!", liste_mot[1].v);
+          fflush(stderr);
           fprintf(stdout, "GUESS %s\n", liste_mot[1].v);
           fflush(stdout);
-        } else { // si j'ai pas proposé quelque chose
-          if (liste_joueur[0].ST == 1) { // Si j'ai pas trouvé le mot
+          word_proposed = liste_mot[1].v;
+        } else { // si j'ai PAS proposé quelque chose
+          if (me_trouve == 0) { // Si j'ai pas trouvé le mot
             reduce_possible_list_with_concept(&taille_mot_candidat, counter_concept_recup-1); // algo() ; counter_concept_recup-1 == last concept's position
 
             // fprintf(stderr, "On a récup %d\n", count_possible_word);
             // fflush(stderr);
 
-            print_decision(taille_mot_candidat, &has_proposed); // Send decision
+            print_decision(taille_mot_candidat, &has_proposed, &word_proposed, manche, tour); // Send decision
+            fprintf(stderr, "mot proposé récup : %s\n", word_proposed);
+            fflush(stderr);
 
           } else { // Si j'ai trouvé le mot
-            if (me_trouve != 1) { // Affecte qu'une fois le changement à trouvé
-              me_trouve = 1;
-            }
             if (tour < 21) { // continue to pass until getting all concepts (20 turns)
               print_pass();
             }
@@ -526,28 +589,52 @@ int main(void) {
 
         tour++;
 
+
         // Récupération informations joueurs restants et ce qu'ils ont proposés
-        for (int nb_player = 0; nb_player < NJ; nb_player++) {
-          memset(line, 0, 255);
-          scanf("%s %d %d", line, &J, &ST);
+        for (int nb_player = 0; nb_player < game.NJ; nb_player++) {
+          int sec_info; // P or J ?
+          int third_info; // END or ST ?
 
-          liste_joueur[nb_player].ST = ST;
+          // test
+          char* first_string = malloc(255 * sizeof(char));
+          scanf(" %[^\n]s\n", line);
+          sscanf(line, "%s %d %d", first_string, &sec_info, &third_info);
 
-          // fprintf(stderr, "Joueur %d propose %s. Sortie ? %d\n", J, line, ST);
-          // fflush(stderr);
-        }
-
-        // Si tout le monde à trouvé, on passe à la manche suivante
-        if (me_trouve == 1 && liste_joueur[0].ST == 1) {
-          is_tous_trouve = 1;
+          // TODO : A factoriser
+          if (third_info == 2) { // I found the word
+            if (me_trouve == 0) {
+              me_trouve = 1;
+              has_proposed = 0;
+            }
+            liste_joueur[sec_info].ST = third_info;
+          } else if (me_trouve == 1 && third_info == 1) { // new round
+            int player_i = atoi(first_string);
+            liste_joueur[player_i].P = sec_info;
+            liste_joueur[player_i].ST = third_info;
+            if (is_tous_trouve == 0)
+              is_tous_trouve = 1;
+          } else {
+            if (third_info == 0) { // player got removed
+              if (is_player_removed == 0)
+                is_player_removed = 1;
+            }
+            liste_joueur[sec_info].ST = third_info;
+          }
         }
       }
 
-      // fprintf(stderr, "réinitialisation!\n");
-      // fflush(stderr);
+
+      if (manche == 0) { // Guess the p param if at manche 0
+        algo_find_p(word_proposed);
+        free(word_proposed);
+      }
+
+
+
       reset_list_word_to_init(); // Remettre la liste_mot à l'initiale
       taille_mot_candidat = NB_WORD;
     }
+    // END GAME
 
     free_global_variables(); // Free the malloc
 

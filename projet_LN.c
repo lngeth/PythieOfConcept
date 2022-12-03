@@ -16,6 +16,7 @@
 // Gérer le cas où des personnes sont éliminés ==> sinon mauvaise récupération des données et erreur
 // optimiser les mallocs (taille des mots & concepts)
 // vérifier que tous les mallocs sont free()
+// remplacer dans les fonctions les tableaux en tableaux dynamiques
 
 
 /* BEGIN Struct */
@@ -38,13 +39,16 @@ struct joueur {
   int ST;
 };
 
+struct coeff_goddess { // TODO : à améliorer
+  int list_possible_coeff[4*4*4][3];
+  int size_list;
+};
+
 struct param_goddess {
   int p;
   int q;
   int p_founded; // status to know if p is founded or not
-  int a;
-  int b;
-  int c;
+  struct coeff_goddess coeff;
 };
 /* END Struct */
 
@@ -289,6 +293,14 @@ void reduce_possible_list_with_concept(int* taille_mot_candidat, int counter_con
   }
 }
 
+/*
+void reduce_possible_list_with_abc(int counter_concept_recup) {
+  for (int i = 0; i < counter_concept_recup; i++) {
+
+  }
+}
+*/
+
 // TODO : A optimiser en recherche dichotomique
 int find_word_position(char* word) {
   for (int i = 0; i < NB_WORD; i++) {
@@ -296,6 +308,14 @@ int find_word_position(char* word) {
       fprintf(stderr, "secret w : %s\n", liste_mot_initiale[i].v);
       fflush(stderr);
       return i;
+    }
+  }
+}
+
+int find_score_concept_with_word_position(char* concept, int w_pos) {
+  for (int i = 0; i < NB_CONCEPT; i++) {
+    if (strcmp(liste_mot_initiale[w_pos].concepts[i], concept)) {
+      return liste_mot_initiale[w_pos].score[i];
     }
   }
 }
@@ -351,6 +371,130 @@ void algo_find_p(char* secret_word) { // TODO : A optimiser
   goddess.p_founded = 1;
 }
 
+// Test all combination of value a, b, c = {5, 35, 65, 95}
+void algo_find_abc(char* secret_word) { // TODO : A optimiser
+  int sw_pos = find_word_position(secret_word);
+  // liste_mot_initiale[sw_pos].concepts[i];
+  int tab_coeff_possible[4] = {5, 35, 65, 95};
+  int all_combination_coeff[4*4*4][4]; // [][a, b, c, state]
+  int count = 0;
+
+  // 3 first concepts
+  char* top_concept[3];
+  for (int i = 0; i < 3; i++) {
+    top_concept[i] = list_turn_concept[i];
+  }
+  fprintf(stderr, "vrai top 3 : %s %s %s\n", top_concept[0], top_concept[1], top_concept[2]);
+  fflush(stderr);
+
+  // tab of sort 3 top concept depending on a, b, c
+  int t_val_concept[3];
+
+  // list all combination of coeff
+  for (int a = 0; a < 4; a++) {
+    for (int b = 0; b < 4; b++) {
+      for (int c = 0; c < 4; c++) {
+        int a_, b_, c_;
+        a_ = tab_coeff_possible[a];
+        b_ = tab_coeff_possible[b];
+        c_ = tab_coeff_possible[c];
+        all_combination_coeff[count][0] = a_;
+        all_combination_coeff[count][1] = b_;
+        all_combination_coeff[count][2] = c_;
+
+
+        // find_score_concept_with_word_position()
+        for (int i = 0; i < 3; i++) {
+          int sc = find_score_concept_with_word_position(top_concept[i], sw_pos);
+          int t_ = t(top_concept[i], secret_word);
+          int u_ = u(top_concept[i], secret_word);
+          // fprintf(stderr, "sc, t, u : %d %d %d\n", sc, t_, u_);
+          // fflush(stderr);
+          t_val_concept[i] = a_ * sc + 10 * b_ * t_ + 10 * c_ * u_;
+        }
+        fprintf(stderr, "t_val : %d %d %d\n", t_val_concept[0], t_val_concept[1], t_val_concept[2]);
+        fflush(stderr);
+
+        char* concept_sorted_abc[3];
+        // copy top_val
+        for (int i = 0; i < 3; i++) {
+          concept_sorted_abc[i] = top_concept[i];
+        }
+
+        // sort 3 top concept by t_val
+        for (int i = 3 - 1; i > 0; i--) { // TODO : actuellement tri à bulle -- > à optimiser et/ou factoriser en fonction
+          for (int j = 0; j < 3 -1; j++) {
+            if (t_val_concept[j+1] > t_val_concept[j]) { // value order
+              int tmp = t_val_concept[j+1];
+              t_val_concept[j+1] = t_val_concept[j];
+              t_val_concept[j] = tmp;
+
+              char* s_tmp = concept_sorted_abc[j+1];
+              concept_sorted_abc[j+1] = concept_sorted_abc[j];
+              concept_sorted_abc[j] = s_tmp;
+            } else if (t_val_concept[j+1] == t_val_concept[j]) { // alphabetic order
+              for (int k = 0; k < strlen(concept_sorted_abc[j+1]); k++) {
+                if (concept_sorted_abc[j+1][k] > concept_sorted_abc[j][k]) { // greater 'z' > 'a'
+                  break;
+                } else if (concept_sorted_abc[j+1][k] < concept_sorted_abc[j][k]) {
+                  int tmp = t_val_concept[j+1];
+                  t_val_concept[j+1] = t_val_concept[j];
+                  t_val_concept[j] = tmp;
+
+                  char* s_tmp = concept_sorted_abc[j+1];
+                  concept_sorted_abc[j+1] = concept_sorted_abc[j];
+                  concept_sorted_abc[j] = s_tmp;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        all_combination_coeff[count][3] = 1;
+
+        // Check if right position of concept
+        for (int i = 0; i < 3; i++){
+          if (strcmp(concept_sorted_abc[i], top_concept[i]) != 0) {
+            all_combination_coeff[count][3] = 0;
+            break;
+          }
+        }
+
+        // add to goddess possible coeff list
+        if (all_combination_coeff[count][3] == 1) {
+          goddess.coeff.list_possible_coeff[goddess.coeff.size_list][0] = all_combination_coeff[count][0];
+          goddess.coeff.list_possible_coeff[goddess.coeff.size_list][1] = all_combination_coeff[count][1];
+          goddess.coeff.list_possible_coeff[goddess.coeff.size_list][2] = all_combination_coeff[count][2];
+          goddess.coeff.size_list++;
+        }
+
+        /*
+        // print check sortie
+        fprintf(stderr, "pour a,b,c = [%d, %d, %d]\n", a_, b_, c_);
+        fflush(stderr);
+        fprintf(stderr, "top concepts : %s %s %s\n", concept_sorted_abc[0], concept_sorted_abc[1], concept_sorted_abc[2]);
+        fflush(stderr);
+        */
+
+        count++;
+      }
+    }
+  }
+
+
+
+  // print of possible combination of coeff that works
+  for (int i = 0; i < goddess.coeff.size_list; i++) {
+    fprintf(stderr, "a = %d ", goddess.coeff.list_possible_coeff[i][0]);
+    fflush(stderr);
+    fprintf(stderr, "b = %d ", goddess.coeff.list_possible_coeff[i][1]);
+    fflush(stderr);
+    fprintf(stderr, "c = %d \n", goddess.coeff.list_possible_coeff[i][2]);
+    fflush(stderr);
+  }
+}
+
 /* END Methods for game's array */
 
 
@@ -388,6 +532,7 @@ void init_global_variables() {
   goddess.p = 3;
   goddess.q = 7;
   goddess.p_founded = 0;
+  goddess.coeff.size_list = 0;
 
   // Init arrays
   for (int i = 0; i < NB_TURN; i++) {
@@ -572,7 +717,10 @@ int main(void) {
         } else { // si j'ai PAS proposé quelque chose
           if (me_trouve == 0) { // Si j'ai pas trouvé le mot
             reduce_possible_list_with_concept(&taille_mot_candidat, counter_concept_recup-1); // algo() ; counter_concept_recup-1 == last concept's position
-
+            /*
+            if (counter_concept_recup >= 2) {
+              reduce_possible_list_with_abc(counter_concept_recup);
+            }*/
             // fprintf(stderr, "On a récup %d\n", count_possible_word);
             // fflush(stderr);
 
@@ -626,6 +774,7 @@ int main(void) {
 
       if (manche == 0) { // Guess the p param if at manche 0
         algo_find_p(word_proposed);
+        algo_find_abc(word_proposed);
         free(word_proposed);
       }
 

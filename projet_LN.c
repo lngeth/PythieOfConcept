@@ -83,7 +83,7 @@ struct list_word initial_sorted_word_list;
 struct list_concept list_concepts_of_round;
 struct algo_data algo1; // only p strat
 struct algo_data algo2; // only with (a, b, c) params
-struct algo_data algo3; // with both p & (a, b, c)
+// struct algo_data algo3; // with both p & (a, b, c)
 struct goddess_param goddess;
 struct game_config game;
 
@@ -105,21 +105,21 @@ void init_global_variables() {
   algo2.candidate_word_list.size = NB_WORD;
   algo2.last_word_proposed = malloc(MAX_SIZE_WORD * sizeof(char));
 
-  algo3.candidate_word_list.list = malloc(NB_WORD*sizeof(struct word));
-  algo3.candidate_word_list.size = NB_WORD;
-  algo3.last_word_proposed = malloc(MAX_SIZE_WORD * sizeof(char));
+  // algo3.candidate_word_list.list = malloc(NB_WORD*sizeof(struct word));
+  // algo3.candidate_word_list.size = NB_WORD;
+  // algo3.last_word_proposed = malloc(MAX_SIZE_WORD * sizeof(char));
 
   for (int i = 0; i < NB_WORD; i++) {
     initial_sorted_word_list.list[i].v = malloc(MAX_SIZE_WORD * sizeof(char));
     algo1.candidate_word_list.list[i].v = malloc(MAX_SIZE_WORD * sizeof(char));
     algo2.candidate_word_list.list[i].v = malloc(MAX_SIZE_WORD * sizeof(char));
-    algo3.candidate_word_list.list[i].v = malloc(MAX_SIZE_WORD * sizeof(char));
+    // algo3.candidate_word_list.list[i].v = malloc(MAX_SIZE_WORD * sizeof(char));
 
     for (int j = 0; j < NB_CONCEPT; j++) {
       initial_sorted_word_list.list[i].concepts[j] = malloc(MAX_SIZE_CONCEPT * sizeof(char));
       algo1.candidate_word_list.list[i].concepts[j] = malloc(MAX_SIZE_CONCEPT * sizeof(char));
       algo2.candidate_word_list.list[i].concepts[j] = malloc(MAX_SIZE_CONCEPT * sizeof(char));
-      algo3.candidate_word_list.list[i].concepts[j] = malloc(MAX_SIZE_CONCEPT * sizeof(char));
+      // algo3.candidate_word_list.list[i].concepts[j] = malloc(MAX_SIZE_CONCEPT * sizeof(char));
     }
   }
 
@@ -128,7 +128,7 @@ void init_global_variables() {
   goddess.p.founded = 0;
 
   game.state.round = 0;
-  game.state.turn = 0;
+  game.state.turn = 1;
   game.state.is_all_founded = 0;
   game.state.is_me_founded = 0;
 }
@@ -138,13 +138,13 @@ void free_global_variables() {
     free(initial_sorted_word_list.list[i].v);
     free(algo1.candidate_word_list.list[i].v);
     free(algo2.candidate_word_list.list[i].v);
-    free(algo3.candidate_word_list.list[i].v);
+    // free(algo3.candidate_word_list.list[i].v);
 
     for (int j = 0; j < NB_CONCEPT; j++) {
       free(initial_sorted_word_list.list[i].concepts[j]);
       free(algo1.candidate_word_list.list[i].concepts[j]);
       free(algo2.candidate_word_list.list[i].concepts[j]);
-      free(algo3.candidate_word_list.list[i].concepts[j]);
+      // free(algo3.candidate_word_list.list[i].concepts[j]);
     }
   }
 
@@ -160,8 +160,8 @@ void free_global_variables() {
   free(algo2.candidate_word_list.list);
   free(algo2.last_word_proposed);
 
-  free(algo3.candidate_word_list.list);
-  free(algo3.last_word_proposed);
+  // free(algo3.candidate_word_list.list);
+  // free(algo3.last_word_proposed);
 
   free(game.players);
 }
@@ -269,71 +269,67 @@ void reset_game_state() {
   memset(algo1.last_word_proposed, 0, MAX_SIZE_WORD);
 
   // reset the list of concept
-  /*
   for (int i = 0; i < list_concepts_of_round.size; i++) {
     memset(list_concepts_of_round.list[i], 0, MAX_SIZE_CONCEPT);
-  }*/
+  }
   list_concepts_of_round.size = 0;
 
-  // copy_sorted_list_in_algos(&algo1);
-  for (int i = 0; i < NB_WORD; i++) {
-    algo1.candidate_word_list.list[i].v = initial_sorted_word_list.list[i].v;
-    for (int j = 0; j < NB_CONCEPT; j++) {
-      algo1.candidate_word_list.list[i].concepts[j] = initial_sorted_word_list.list[i].concepts[j];
-      algo1.candidate_word_list.list[i].scores[j] = initial_sorted_word_list.list[i].scores[j];
-    }
-  }
+  copy_sorted_list_in_algos(&algo1);
 
   algo1.candidate_word_list.size = NB_WORD;
+}
+
+void get_round_infos() {
+  for (int nb_player = 0; nb_player < game.NJ; nb_player++) {
+    char* line = malloc(MAX_SIZE_WORD * sizeof(char));
+    scanf(" %[^\n]s\n", line);
+
+    int J, P, END;
+
+    sscanf(line, "%d %d %d", &J, &P, &END);
+    game.players[J].score = P;
+    game.players[J].ST = END;
+
+    fprintf(stderr, "J: %d , P: %d , END: %d\n", J, P, END);
+    fflush(stderr);
+  }
 }
 
 // Récupération informations joueurs restants et ce qu'ils ont proposés
 /* Get all players informations : can be (J P END) or (W J ST)
  *
  */
-void get_game_infos() {
+void get_turn_infos() {
   for (int nb_player = 0; nb_player < game.NJ; nb_player++) {
     char* line = malloc(MAX_SIZE_WORD * sizeof(char));
     scanf(" %[^\n]s\n", line);
 
-    if (game.state.turn == 0) { // (J P END)
+    char* first_string = malloc(MAX_SIZE_WORD * sizeof(char)); // W or J ?
+    int sec_info; // P or J ?
+    int third_info; // END or ST ?
+    sscanf(line, "%s %d %d", first_string, &sec_info, &third_info);
 
-      int J, P, END;
-
-      sscanf(line, "%d %d %d", &J, &P, &END);
-      game.players[J].score = P;
-      game.players[J].ST = END;
-
-      fprintf(stderr, "Tour 0 ,, J: %d , P: %d , END: %d\n", J, P, END);
-      fflush(stderr);
-    } else {
-      char* first_string = malloc(MAX_SIZE_WORD * sizeof(char)); // W or J ?
-      int sec_info; // P or J ?
-      int third_info; // END or ST ?
-      sscanf(line, "%s %d %d", first_string, &sec_info, &third_info);
-
-      if (third_info == 2) {
-        if (game.state.is_me_founded == 0) {
-          game.state.is_me_founded = 1;
-        }
-        game.players[sec_info].ST = third_info;
-
-        fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
-        fflush(stderr);
-      } else if (game.state.is_me_founded == 1 & third_info == 1) { // new round with (J, P, END)
-        int player_i = atoi(first_string);
-        game.players[player_i].score = sec_info;
-        game.players[player_i].ST = third_info;
-        game.state.is_all_founded = 1;
-
-        fprintf(stderr, "J: %d , P: %d , END: %d\n", player_i, sec_info, third_info);
-        fflush(stderr);
-      } else { // (W J ST)
-        game.players[sec_info].ST = third_info;
-
-        fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
-        fflush(stderr);
+    if (third_info == 2) {
+      if (game.state.is_me_founded == 0) {
+        game.state.is_me_founded = 1;
       }
+      game.players[sec_info].ST = third_info;
+
+      fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
+      fflush(stderr);
+    } else if (game.state.is_me_founded == 1 & third_info == 1) { // new round with (J, P, END)
+      int player_i = atoi(first_string);
+      game.players[player_i].score = sec_info;
+      game.players[player_i].ST = third_info;
+      game.state.is_all_founded = 1;
+
+      fprintf(stderr, "J: %d , P: %d , END: %d\n", player_i, sec_info, third_info);
+      fflush(stderr);
+    } else { // (W J ST)
+      game.players[sec_info].ST = third_info;
+
+      fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
+      fflush(stderr);
     }
 
     free(line);
@@ -350,6 +346,11 @@ void remove_word_from_candidate_list_algos_by_index(struct algo_data* algo, int 
     }
   }
 
+  memset(algo->candidate_word_list.list[last_element_index].v, 0, MAX_SIZE_WORD);
+  for (int i = 0; i < NB_CONCEPT; i++) {
+    memset(algo->candidate_word_list.list[last_element_index].concepts[i], 0, MAX_SIZE_CONCEPT);
+  }
+
   algo->candidate_word_list.size = last_element_index;
 }
 
@@ -363,7 +364,7 @@ void get_concept() {
 
   fprintf(stderr, "Récupération mot : %s, taille = %d \n", list_concepts_of_round.list[new_size-1], list_concepts_of_round.size);
   fflush(stderr);
-  // free(line);
+  free(line);
 }
 
 void ia_algo1() {
@@ -400,11 +401,13 @@ void ia_algo1() {
     }
   }
 
+
   for (int i = 0; i < nb_to_remove; i++) {
     remove_word_from_candidate_list_algos_by_index(&algo1, to_remove_index[i]);
   }
 
   free(to_remove_index);
+
 
   fprintf(stderr, "Nombre restant : %d\n", algo1.candidate_word_list.size);
   fflush(stderr);
@@ -452,7 +455,7 @@ void print_decision() {
       }
     }
   } else {
-    if (list_concepts_of_round.size <=  NB_TURN) {
+    if (list_concepts_of_round.size <= NB_TURN) {
       if (game.state.is_me_founded == 1) {
         fprintf(stderr, "3 \n");
         fflush(stderr);
@@ -508,39 +511,74 @@ int main() {
 
   sort_concept_by_score_asc();
 
-  // copy_sorted_list_in_algos(&algo1);
-  for (int i = 0; i < NB_WORD; i++) {
-    algo1.candidate_word_list.list[i].v = initial_sorted_word_list.list[i].v;
-    for (int j = 0; j < NB_CONCEPT; j++) {
-      algo1.candidate_word_list.list[i].concepts[j] = initial_sorted_word_list.list[i].concepts[j];
-      algo1.candidate_word_list.list[i].scores[j] = initial_sorted_word_list.list[i].scores[j];
+  copy_sorted_list_in_algos(&algo1);
+
+  print_concepts_words_list(); // print the list for debug
+
+  int* round = &(game.state.round);
+
+  for (*round = 0; *round < NB_ROUND; (*round)++) {
+    for (int turn = 1; turn < NB_TURN + 3; turn++) {
+      fprintf(stderr, "start turn %d\n", game.state.turn);
+      fflush(stderr);
+
+      if (turn == 1) {
+        get_round_infos();
+      } else if (turn == 22) {
+        fprintf(stderr, "last turn\n");
+        fflush(stderr);
+      } else {
+        get_concept();
+        if (game.state.is_me_founded == 0) {
+          fprintf(stderr, "Je lance l'algo !\n");
+          fflush(stderr);
+          all_algo();
+        }
+        print_decision();
+        get_turn_infos();
+      }
+
+      game.state.turn++;
+
+      for (int i = 0; i < list_concepts_of_round.size; i++) {
+        fprintf(stderr, "concept %d : %s\n",i, list_concepts_of_round.list[i]);
+        fflush(stderr);
+      }
     }
+    reset_game_state();
+    fprintf(stderr, "reset game, nouveau round : %d \n", game.state.round);
+    fflush(stderr);
   }
 
-  // print_concepts_words_list(); // print the list for debug
-
+  /*
   while(1) {
     if (game.state.round == 5) {
       break;
     }
-    get_game_infos();
+
+    fprintf(stderr, "start turn %d\n", game.state.turn);
+    fflush(stderr);
+
     if (game.state.is_all_founded == 1) {
       reset_game_state();
       game.state.round += 1;
-      game.state.turn = 0;
       fprintf(stderr, "reset game, nouveau round : %d \n", game.state.round);
       fflush(stderr);
     }
 
-    if (game.state.turn < NB_TURN) {
+    if (list_concepts_of_round.size < NB_TURN) {
       get_concept();
     }
     if (game.state.is_me_founded == 0) {
+      fprintf(stderr, "Je lance l'algo !\n");
+      fflush(stderr);
       all_algo();
     }
     print_decision();
+    get_turn_infos();
     game.state.turn++;
   }
+  */
 
   fprintf(stderr, "END OF GAME\n");
   fflush(stderr);

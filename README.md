@@ -1,6 +1,8 @@
 # Reste à faire
 
-- remove_unused_variables : Enlever les variables non nécessaires (*)
-- globalize_varibles : Mettre les variables nécessaires en globales, c'est à dire ceux pour utilisé par les fonctions
-- free_malloc : Libérer les mallocs
+- Créer des prototypes des fonctions et les placer dans l'ordre en haut :  
+  - Cela permettra de placer les définitions des fonctions dans n'importe quel ordre.
+- Dans les fonctions, enlever les mallocs inutiles et les remplacer par des tableaux.
+- Créer la documentation.
+- Ajouter la complexité dans la doc des fonctions.
 - ... à définir

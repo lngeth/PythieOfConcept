@@ -87,13 +87,13 @@ struct algo_data {
 
 
 /* Global variables */
-static struct list_word initial_sorted_word_list = { NULL, 0 };
-static struct list_concept list_concepts_of_round = { NULL, 0 };
-static struct algo_data algo1 = { { NULL, 0 }, NULL }; // only p strat
-static struct algo_data algo2 = { { NULL, 0 }, NULL }; // only with (a, b, c) params
-static struct algo_data algo3 = { { NULL, 0 }, NULL }; // with both p & (a, b, c)
-static struct goddess_param goddess = { { 0, 0, 0 }, NULL, 0, {-1, -1, -1, -1, -1} };
-static struct game_config game = { NULL, 0, 0, { 0, 0, 0, 0 } };
+static struct list_word initial_sorted_word_list;
+static struct list_concept list_concepts_of_round;
+static struct algo_data algo1; // only p strat
+static struct algo_data algo2; // only with (a, b, c) params
+static struct algo_data algo3; // with both p & (a, b, c)
+static struct goddess_param goddess;
+static struct game_config game;
 static int possible_coeff[NB_COEFF] = {5, 35, 65, 95};
 
 void print_all_valid_coeffs() {
@@ -326,6 +326,7 @@ int find_word_index_in_sorted_list(char* word) {
       return i;
     }
   }
+  return -1;
 }
 
 void remove_word_from_algos_word_list(struct algo_data* algo, char* word) {
@@ -370,7 +371,7 @@ void get_turn_infos() {
 
       fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
       fflush(stderr);
-    } else if (game.state.is_me_founded == 1 & third_info == 1) { // new round with (J, P, END)
+    } else if (game.state.is_me_founded == 1 && third_info == 1) { // new round with (J, P, END)
       int player_i = atoi(first_string);
       game.players[player_i].score = sec_info;
       game.players[player_i].ST = third_info;
@@ -414,8 +415,8 @@ void get_concept() {
   sscanf(line, "%s", list_concepts_of_round.list[new_size-1]);
   list_concepts_of_round.size = new_size;
 
-  fprintf(stderr, "Récupération mot : %s, taille = %d \n", list_concepts_of_round.list[new_size-1], list_concepts_of_round.size);
-  fflush(stderr);
+  // fprintf(stderr, "Récupération mot : %s, taille = %d \n", list_concepts_of_round.list[new_size-1], list_concepts_of_round.size);
+  // fflush(stderr);
 }
 
 void ia_algo1() {
@@ -797,10 +798,12 @@ void algo2_find_abc() {
   // check coeff to keep
   fprintf(stderr, "Nombre de coeff à garder : %d\n", nb_coeffs_to_keep);
   fflush(stderr);
+  /*
   for (int i = 0; i < nb_coeffs_to_keep; i++) {
     fprintf(stderr, "a : %d, b : %d, c : %d\n", new_possible_coeffs[i].a, new_possible_coeffs[i].b, new_possible_coeffs[i].c);
     fflush(stderr);
   }
+  */
 }
 
 void all_algo() {
@@ -808,7 +811,7 @@ void all_algo() {
   t = clock();
 
   ia_algo1();
-  if (game.state.round != 0 && goddess.size_t_coeff > 0 && list_concepts_of_round.size > 1) {
+  if (game.state.round != 0 && goddess.size_t_coeff > 0 && goddess.size_t_coeff <= 40 && list_concepts_of_round.size > 1) {
     ia_algo2();
     if (algo1.candidate_word_list.size > 1 && algo2.candidate_word_list.size > 1 && algo3.candidate_word_list.size != 0) {
       ia_algo3();
@@ -848,43 +851,67 @@ int get_random_int_in_range(int min, int max) {
 void print_decision() {
   if (game.state.round == 0) {
     if (list_concepts_of_round.size < NB_TURN) {
-      fprintf(stderr, "1 \n");
-      fflush(stderr);
-      print_pass();
+      if (goddess.p.founded == 1 && algo1.candidate_word_list.size == 1 && game.state.is_me_founded == 0) {
+        fprintf(stderr, "1 \n");
+        fflush(stderr);
+        guess_word(&algo1, algo1.candidate_word_list.list[0].v);
+      } else {
+        fprintf(stderr, "2 \n");
+        fflush(stderr);
+        print_pass();
+      }
     } else {
       if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
-        fprintf(stderr, "2 \n");
+        fprintf(stderr, "3 \n");
         fflush(stderr);
         int index_to_guess = get_random_int_in_range(0, algo1.candidate_word_list.size-1);
         guess_word(&algo1, algo1.candidate_word_list.list[index_to_guess].v);
+      } else if (game.state.is_me_founded == 1 && game.state.round % 21 == 0) {
+        print_pass();
       }
     }
   } else {
     if (list_concepts_of_round.size <= NB_TURN) {
       if (game.state.is_me_founded == 1) {
-        fprintf(stderr, "3 \n");
+        fprintf(stderr, "4 \n");
         fflush(stderr);
         print_pass();
       } else {
+        fprintf(stderr, "5 \n");
+        fflush(stderr);
         struct algo_data* strongest_algo;
         if (algo1.candidate_word_list.size == 1) {
+          fprintf(stderr, "5.1 \n");
+          fflush(stderr);
           strongest_algo = &algo1;
         } else if (algo2.candidate_word_list.size == 1){
+          fprintf(stderr, "5.2 \n");
+          fflush(stderr);
           strongest_algo = &algo2;
         } else if (algo3.candidate_word_list.size == 1){
+          fprintf(stderr, "5.3 \n");
+          fflush(stderr);
           strongest_algo = &algo3;
         } else {
+          fprintf(stderr, "5.4 \n");
+          fflush(stderr);
           strongest_algo = NULL;
         }
 
         if (strongest_algo == NULL) {
+          fprintf(stderr, "5.5 \n");
+          fflush(stderr);
           print_pass();
         } else {
+          fprintf(stderr, "mot que je guess : %s\n",strongest_algo->candidate_word_list.list[0].v);
+          fflush(stderr);
           guess_word(strongest_algo, strongest_algo->candidate_word_list.list[0].v);
         }
       }
     } else {
       if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
+        fprintf(stderr, "6 \n");
+        fflush(stderr);
         // Retrieve the algo that have the minest size of word possible
         struct algo_data* less_worse_algo;
         if (algo1.candidate_word_list.size <= algo2.candidate_word_list.size) {
@@ -906,59 +933,44 @@ void print_decision() {
 /* Algo to guess the 'p' param of the goddess
  * Supposed to only be executed at the end of first round
  */
-void find_p() { // TODO : A optimiser
-  int tab[NB_CONCEPT] = {0};
+void find_p(int start_index, int end_index, int index_sw) { // TODO : A optimiser
+  // goddess.secret_words_index[game.state.round];
 
-
-  for (int i = 0; i < NB_TURN; i++) {
+  for (int i = start_index; i < end_index+1; i++) {
     for (int j = 0; j < NB_CONCEPT; j++) {
-      if (strcmp(list_concepts_of_round.list[i], initial_sorted_word_list.list[goddess.secret_words_index[game.state.round]].concepts[j]) == 0) {
-        tab[j] = 1;
+      if (strcmp(list_concepts_of_round.list[i], initial_sorted_word_list.list[index_sw].concepts[j]) == 0) {
+        if (j == 6) {
+          goddess.p.upper = 3;
+          goddess.p.lower = 3;
+          goddess.p.founded = 1;
+        } else if (j == 33) {
+          goddess.p.upper = 7;
+          goddess.p.lower = 7;
+          goddess.p.founded = 1;
+        } else {
+          if (j < 7) { // Lower bound
+            if (j > 2 && (10 - (j + 1)) < goddess.p.upper) {
+              goddess.p.upper = (10 - (j + 1));
+            }
+          } else { // Upper bound
+            if (j < 37 && (((NB_CONCEPT-1)-(j-1)) - 10) > goddess.p.lower) {
+              goddess.p.lower = ((NB_CONCEPT-1)-(j-1)) - 10;
+            }
+          }
+        }
+
+        if (goddess.p.lower == goddess.p.upper) {
+          goddess.p.founded = 1;
+        }
         break;
       }
     }
-
-    // p can be found faster if it is at position 6 or 33
-    if (tab[6] == 1) {
-      goddess.p.lower = 3;
-      goddess.p.upper = 3;
-      goddess.p.founded = 1;
+    
+    if (goddess.p.founded == 1)
       break;
-    }
-    if (tab[33] == 1) {
-      goddess.p.lower = 7;
-      goddess.p.upper = 7;
-      goddess.p.founded = 1;
-      break;
-    }
   }
 
-  if (goddess.p.founded == 0) {
-    // visualize the logic I made
-    /*
-    fprintf(stderr, "[");
-    fflush(stderr);
-    for (int i = 0; i < NB_CONCEPT; i++) {
-      fprintf(stderr, "%d, ", tab[i]);
-      fflush(stderr);
-    }
-    fprintf(stderr, "]\n");
-    fflush(stderr);
-    */
-
-    int count = 0;
-    for (int i = 0; i < 10 - goddess.p.lower; i++) {
-      if (tab[i] == 1)
-        count++;
-      else
-        break;
-    }
-
-    goddess.p.lower = 10 - count;
-    goddess.p.upper = 10 - count;
-    goddess.p.founded = 1;
-  }
-  fprintf(stderr, "trouvé p : %d\n", goddess.p.upper);
+  fprintf(stderr, "p : [%d, %d]\n", goddess.p.lower, goddess.p.upper);
   fflush(stderr);
 }
 
@@ -1004,6 +1016,9 @@ int main() {
         if (game.state.is_me_founded == 0) {
           all_algo();
         }
+        if (*round == 0 && algo1.candidate_word_list.size == 1 && goddess.p.founded == 0)
+          find_p(0, list_concepts_of_round.size-1, find_word_index_in_sorted_list(algo1.candidate_word_list.list[0].v));
+
         print_decision();
         get_turn_infos();
       }
@@ -1011,7 +1026,8 @@ int main() {
     }
 
     if (*round == 0 && goddess.secret_words_index[0] != -1) {
-      find_p();
+      if (goddess.p.founded == 0)
+        find_p(0, NB_CONCEPT-1, goddess.secret_words_index[game.state.round]);
       algo2_find_abc();
     }
 

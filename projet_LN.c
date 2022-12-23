@@ -12,12 +12,12 @@
  *
  * - Algo 2 : Cet algorithme utilise les triplets de valeurs possibles de (a, b, c) valides parmi la liste les choix suivants { 5, 35, 65, 95 } pour deviner le mot secret.
  *            Il existe donc au maximum 64 combinaisons possibles avec ces 4 valeurs, ce qui est moins long que [1, 100] pour chaque paramètre.
- *            La détermination des coefficients valides se fait après la connaissance du mot secret du premier tour (éxécution de la fonction algo2_find_abc()). 
+ *            La détermination des coefficients valides se fait après la connaissance du mot secret du premier tour (éxécution de la fonction algo2_find_abc()).
  *            Si le mot secret du premier tour n'a pas été trouvé, l'algorithme 2 ne sera pas éxécuté pendant tout le reste du jeu.
  *            Pour lister les coefficients possibles, l'algorithme regarde parmi les 3 premiers concepts du mot secret donné par la déesse et pour chaque triplet,
  *            vérifie si le paramètre calculé suivant 't_val = a*score + 10*b*t + 10*b*u' pour ces 3 concepts permet de les ordonnés dans le même ordre que celui donné
  *            par la déesse lorsqu'on trie ces 3 t_val de manière décroissantes. Si c'est le cas, le triplet en question est valide, sinon on ne le garde pas.
- *            Puis lorsque l'algorithme possède une liste de coefficient possible (taille > 0), il regarde à chaque tour si les 2 derniers concepts donnés par la déesse 
+ *            Puis lorsque l'algorithme possède une liste de coefficient possible (taille > 0), il regarde à chaque tour si les 2 derniers concepts donnés par la déesse
  *            permettent d'ordonner chaque mot de la liste de mot candidat restant selon la méthode calcul de t_val cité en haut. Si pour un mot donné, ce n'est pas ordonné,
  *            on enlève le mot de la liste. Cela se fait donc à partir du tour 2, quand la déeese a donné 2 concepts.
  *           --> Cet algorithme ne se lance que si la liste de combinaisons possibles est supérieur à 0 et peut ne pas avoir le mot secret dans sa liste.
@@ -25,8 +25,8 @@
  * - Algo 3 : Cet algorithme fait une utilise les 2 premiers algorithmes cités en haut pour essayer de trouver le mot plus rapidement.
  *            Il fait l'intersection entre les mots candidats de l'algo 1 et 2, puis avec sa propre liste qui n'est que la sauvegarde de l'intersection des listes
  *            précédente.
- *            Exemple : 
- *              - 1er d'éxec de l'algo 3 : liste_algo1 /\ liste_algo2 = liste_algo3 
+ *            Exemple :
+ *              - 1er d'éxec de l'algo 3 : liste_algo1 /\ liste_algo2 = liste_algo3
  *              - 2e tour : liste_algo1 /\ liste_algo2 /\ liste_algo3 = liste_algo3
  *              - etc...
  *            --> Cet algorithme ne se lance que si l'algorithme 2 est éxécuté et peut ne pas avoir le mot secret dans sa liste.
@@ -285,18 +285,18 @@ void sort_concept_by_score_asc() {
           initial_sorted_word_list.list[i].scores[k + 1] = initial_sorted_word_list.list[i].scores[k];
           initial_sorted_word_list.list[i].scores[k] = tmp_i;
 
-          tmp_s = initial_sorted_word_list.list[i].concepts[k + 1];
-          initial_sorted_word_list.list[i].concepts[k + 1] = initial_sorted_word_list.list[i].concepts[k];
-          initial_sorted_word_list.list[i].concepts[k] = tmp_s;
+          strcpy(tmp_s, initial_sorted_word_list.list[i].concepts[k + 1]);
+          strcpy(initial_sorted_word_list.list[i].concepts[k + 1], initial_sorted_word_list.list[i].concepts[k]);
+          strcpy(initial_sorted_word_list.list[i].concepts[k], tmp_s);
         } else if (initial_sorted_word_list.list[i].scores[k + 1] == initial_sorted_word_list.list[i].scores[k]) {
           if (strcmp(initial_sorted_word_list.list[i].concepts[k], initial_sorted_word_list.list[i].concepts[k+1]) == 1) {
             tmp_i = initial_sorted_word_list.list[i].scores[k + 1];
             initial_sorted_word_list.list[i].scores[k + 1] = initial_sorted_word_list.list[i].scores[k];
             initial_sorted_word_list.list[i].scores[k] = tmp_i;
 
-            tmp_s = initial_sorted_word_list.list[i].concepts[k + 1];
-            initial_sorted_word_list.list[i].concepts[k + 1] = initial_sorted_word_list.list[i].concepts[k];
-            initial_sorted_word_list.list[i].concepts[k] = tmp_s;
+            strcpy(tmp_s, initial_sorted_word_list.list[i].concepts[k + 1]);
+            strcpy(initial_sorted_word_list.list[i].concepts[k + 1], initial_sorted_word_list.list[i].concepts[k]);
+            strcpy(initial_sorted_word_list.list[i].concepts[k], tmp_s);
           }
         }
       }
@@ -307,9 +307,9 @@ void sort_concept_by_score_asc() {
 
 void copy_sorted_list_in_algos(struct algo_data* algo) {
   for (int i = 0; i < NB_WORD; i++) {
-    algo->candidate_word_list.list[i].v = initial_sorted_word_list.list[i].v;
+    strcpy(algo->candidate_word_list.list[i].v, initial_sorted_word_list.list[i].v);
     for (int j = 0; j < NB_CONCEPT; j++) {
-      algo->candidate_word_list.list[i].concepts[j] = initial_sorted_word_list.list[i].concepts[j];
+      strcpy(algo->candidate_word_list.list[i].concepts[j], initial_sorted_word_list.list[i].concepts[j]);
       algo->candidate_word_list.list[i].scores[j] = initial_sorted_word_list.list[i].scores[j];
     }
   }
@@ -371,9 +371,9 @@ void remove_word_from_algos_word_list(struct algo_data* algo, char* word) {
     if (strcmp(algo->candidate_word_list.list[i].v, word) == 0) {
       int last_element_index = (algo->candidate_word_list.size)-1;
       for (int j = i; j < last_element_index; j++) {
-        algo->candidate_word_list.list[j].v = algo->candidate_word_list.list[j+1].v;
+        strcpy(algo->candidate_word_list.list[j].v, algo->candidate_word_list.list[j+1].v);
         for (int k = 0; k < NB_CONCEPT; k++) {
-          algo->candidate_word_list.list[j].concepts[k] = algo->candidate_word_list.list[j+1].concepts[k];
+          strcpy(algo->candidate_word_list.list[j].concepts[k], algo->candidate_word_list.list[j+1].concepts[k]);
           algo->candidate_word_list.list[j].scores[k] = algo->candidate_word_list.list[j+1].scores[k];
         }
       }
@@ -419,28 +419,22 @@ void get_turn_infos() {
     } else { // (W J ST)
       game.players[sec_info].ST = third_info;
 
+      if (strcmp(first_string, "NULL") != 0) { // Someone (can be me) proposed a word which is wrong
+        remove_word_from_algos_word_list(&algo1, first_string);
+        remove_word_from_algos_word_list(&algo2, first_string);
+        remove_word_from_algos_word_list(&algo3, first_string);
+        memset(algo1.last_word_proposed, 0, MAX_SIZE_WORD); // TODO : Créer une fonction qui clean
+        memset(algo2.last_word_proposed, 0, MAX_SIZE_WORD);
+        memset(algo3.last_word_proposed, 0, MAX_SIZE_WORD);
+      }
+
       fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
       fflush(stderr);
     }
   }
 
-  if (game.state.is_me_founded == 0) {
-    struct algo_data* algo_to_clean;
-
-    if (strlen(algo1.last_word_proposed) != 0) {
-      algo_to_clean = &algo1;
-    } else if (strlen(algo2.last_word_proposed) != 0) {
-      algo_to_clean = &algo2;
-    } else if (strlen(algo3.last_word_proposed) != 0) {
-      algo_to_clean = &algo3;
-    } else {
-      algo_to_clean = NULL;
-    }
-
-    if (algo_to_clean != NULL) {
-      remove_word_from_algos_word_list(algo_to_clean, algo_to_clean->last_word_proposed);
-      memset(algo_to_clean->last_word_proposed, 0, MAX_SIZE_WORD);
-    }
+  if (algo3.candidate_word_list.size == 0 && algo2.candidate_word_list.size != 0) { // algo3 went wrong, we must stop algo2 if it's still running
+    algo2.candidate_word_list.size = 0;
   }
 }
 
@@ -460,11 +454,10 @@ void ia_algo1() {
   clock_t tps;
   tps = clock();
 
-  fprintf(stderr, "Je commence avec : %d\n", algo1.candidate_word_list.size);
-  fflush(stderr);
-
   // print_concepts_words_list(&algo1.candidate_word_list);
   int algo1_list_size = algo1.candidate_word_list.size;
+  fprintf(stderr, "Algo 1 début : %d\n", algo1.candidate_word_list.size);
+  fflush(stderr);
   /* // TODO : Voir pq ca marche pas cette manière
   struct list_word new_candidat_list;
 
@@ -513,9 +506,9 @@ void ia_algo1() {
 
     if (partie_basse == 1 || partie_haute == 1) {
       int new_size = new_candidat_list.size;
-      new_candidat_list.list[new_size].v = algo1.candidate_word_list.list[i].v;
+      strcpy(new_candidat_list.list[new_size].v, algo1.candidate_word_list.list[i].v);
       for (int j = 0; j < NB_CONCEPT; j++) {
-        new_candidat_list.list[new_size].concepts[j] = algo1.candidate_word_list.list[i].concepts[j];
+        strcpy(new_candidat_list.list[new_size].concepts[j], algo1.candidate_word_list.list[i].concepts[j]);
         new_candidat_list.list[new_size].scores[j] = algo1.candidate_word_list.list[i].scores[j];
       }
       new_candidat_list.size++;
@@ -523,9 +516,9 @@ void ia_algo1() {
   }
 
   for (int i = 0; i < new_candidat_list.size; i++) {
-    algo1.candidate_word_list.list[i].v = new_candidat_list.list[i].v;
+    strcpy(algo1.candidate_word_list.list[i].v, new_candidat_list.list[i].v);
     for (int j = 0; j < NB_CONCEPT; j++) {
-      algo1.candidate_word_list.list[i].concepts[j] = new_candidat_list.list[i].concepts[j];
+      strcpy(algo1.candidate_word_list.list[i].concepts[j], new_candidat_list.list[i].concepts[j]);
       algo1.candidate_word_list.list[i].scores[j] = new_candidat_list.list[i].scores[j];
     }
   }
@@ -566,6 +559,8 @@ void ia_algo2() {
 
   int algo2_list_size = algo2.candidate_word_list.size;
 
+  fprintf(stderr, "Algo 2 début : %d\n", algo2.candidate_word_list.size);
+  fflush(stderr);
 
   struct list_word new_candidat_list;
   new_candidat_list.list = malloc(algo2_list_size * sizeof(struct word));
@@ -606,9 +601,9 @@ void ia_algo2() {
 
     if (remove_word == 0) { // We keep the word
       int new_size = new_candidat_list.size;
-      new_candidat_list.list[new_size].v = algo2.candidate_word_list.list[i].v;
+      strcpy(new_candidat_list.list[new_size].v, algo2.candidate_word_list.list[i].v);
       for (int j = 0; j < NB_CONCEPT; j++) {
-        new_candidat_list.list[new_size].concepts[j] = algo2.candidate_word_list.list[i].concepts[j];
+        strcpy(new_candidat_list.list[new_size].concepts[j], algo2.candidate_word_list.list[i].concepts[j]);
         new_candidat_list.list[new_size].scores[j] = algo2.candidate_word_list.list[i].scores[j];
       }
       new_candidat_list.size++;
@@ -616,9 +611,9 @@ void ia_algo2() {
   }
 
   for (int i = 0; i < new_candidat_list.size; i++) {
-    algo2.candidate_word_list.list[i].v = new_candidat_list.list[i].v;
+    strcpy(algo2.candidate_word_list.list[i].v, new_candidat_list.list[i].v);
     for (int j = 0; j < NB_CONCEPT; j++) {
-      algo2.candidate_word_list.list[i].concepts[j] = new_candidat_list.list[i].concepts[j];
+      strcpy(algo2.candidate_word_list.list[i].concepts[j], new_candidat_list.list[i].concepts[j]);
       algo2.candidate_word_list.list[i].scores[j] = new_candidat_list.list[i].scores[j];
     }
   }
@@ -636,6 +631,9 @@ void ia_algo2() {
 void ia_algo3() {
   clock_t tps;
   tps = clock();
+
+  fprintf(stderr, "Algo 3 début : %d\n", algo3.candidate_word_list.size);
+  fflush(stderr);
 
   struct algo_data* smaller;
   struct algo_data* bigger;
@@ -662,9 +660,9 @@ void ia_algo3() {
   for (int i = 0; i < smaller->candidate_word_list.size; i++) {
     for (int j = 0; j < bigger->candidate_word_list.size; j++) {
       if (strcmp(smaller->candidate_word_list.list[i].v, bigger->candidate_word_list.list[j].v) == 0) {
-        intersection_of_candidate_word.list[intersection_of_candidate_word.size].v = smaller->candidate_word_list.list[i].v;
+        strcpy(intersection_of_candidate_word.list[intersection_of_candidate_word.size].v, smaller->candidate_word_list.list[i].v);
         for (int k = 0; k < NB_CONCEPT; k++) {
-          intersection_of_candidate_word.list[intersection_of_candidate_word.size].concepts[k] = smaller->candidate_word_list.list[i].concepts[k];
+          strcpy(intersection_of_candidate_word.list[intersection_of_candidate_word.size].concepts[k], smaller->candidate_word_list.list[i].concepts[k]);
           intersection_of_candidate_word.list[intersection_of_candidate_word.size].scores[k] = smaller->candidate_word_list.list[i].scores[k];
         }
         intersection_of_candidate_word.size++;
@@ -697,9 +695,9 @@ void ia_algo3() {
   for (int i = 0; i < smaller_lw->size; i++) {
     for (int j = 0; j < bigger_lw->size; j++) {
       if (strcmp(smaller_lw->list[i].v, bigger_lw->list[j].v) == 0) {
-        final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].v = smaller_lw->list[i].v;
+        strcpy(final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].v, smaller_lw->list[i].v);
         for (int k = 0; k < NB_CONCEPT; k++) {
-          final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].concepts[k] = smaller_lw->list[i].concepts[k];
+          strcpy(final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].concepts[k], smaller_lw->list[i].concepts[k]);
           final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].scores[k] = smaller_lw->list[i].scores[k];
         }
         final_inter_of_candidate_word.size++;
@@ -709,14 +707,28 @@ void ia_algo3() {
   }
 
   // Copy the final intersection into the algo3 candidate word list
-  for (int i = 0; i < final_inter_of_candidate_word.size; i++) {
-    algo3.candidate_word_list.list[i].v = final_inter_of_candidate_word.list[i].v;
-    for (int j = 0; j < NB_CONCEPT; j++) {
-      algo3.candidate_word_list.list[i].concepts[j] = final_inter_of_candidate_word.list[i].concepts[j];
-      algo3.candidate_word_list.list[i].scores[j] = final_inter_of_candidate_word.list[i].scores[j];
-    }
+  struct list_word* algo_to_keep;
+  if (final_inter_of_candidate_word.size != 0) {
+    algo_to_keep = &final_inter_of_candidate_word;
+  } else {
+    algo_to_keep = &intersection_of_candidate_word;
   }
-  algo3.candidate_word_list.size = final_inter_of_candidate_word.size;
+
+  if (algo_to_keep->size == 0) { // that means that algo 2 has no commum words with algo1: Algo 2 made a mistake !! No need to use algo2 and 3 anymore
+    algo2.candidate_word_list.size = 0;
+    algo3.candidate_word_list.size = 0;
+    fprintf(stderr, "Algo 2 et 3 ne sont plus valides !\n");
+    fflush(stderr);
+  } else {
+    for (int i = 0; i < algo_to_keep->size; i++) {
+      strcpy(algo3.candidate_word_list.list[i].v, algo_to_keep->list[i].v);
+      for (int j = 0; j < NB_CONCEPT; j++) {
+        strcpy(algo3.candidate_word_list.list[i].concepts[j], algo_to_keep->list[i].concepts[j]);
+        algo3.candidate_word_list.list[i].scores[j] = algo_to_keep->list[i].scores[j];
+      }
+    }
+    algo3.candidate_word_list.size = algo_to_keep->size;
+  }
 
   fprintf(stderr, "(Algo 3) Nombre restant : %d\n", algo3.candidate_word_list.size);
   fflush(stderr);
@@ -848,7 +860,21 @@ void all_algo() {
   t = clock();
 
   ia_algo1();
-  if (game.state.round != 0 && goddess.size_t_coeff > 0 && goddess.size_t_coeff <= 40 && list_concepts_of_round.size > 1) {
+  if (game.state.round != 0 && goddess.size_t_coeff > 0 && list_concepts_of_round.size > 1 && algo2.candidate_word_list.size > 0) {
+    if (list_concepts_of_round.size == 2) {
+      for (int i = 0; i < NB_WORD; i++) { // TODO : À modifier
+        strcpy(algo2.candidate_word_list.list[i].v, algo1.candidate_word_list.list[i].v);
+        strcpy(algo3.candidate_word_list.list[i].v, algo1.candidate_word_list.list[i].v);
+        for (int j = 0; j < NB_CONCEPT; j++) {
+          strcpy(algo2.candidate_word_list.list[i].concepts[j], algo1.candidate_word_list.list[i].concepts[j]);
+          strcpy(algo3.candidate_word_list.list[i].concepts[j], algo1.candidate_word_list.list[i].concepts[j]);
+          algo2.candidate_word_list.list[i].scores[j] = algo1.candidate_word_list.list[i].scores[j];
+          algo3.candidate_word_list.list[i].scores[j] = algo1.candidate_word_list.list[i].scores[j];
+        }
+      }
+      algo2.candidate_word_list.size = algo1.candidate_word_list.size;
+      algo3.candidate_word_list.size = algo1.candidate_word_list.size;
+    }
     ia_algo2();
     if (algo1.candidate_word_list.size > 1 && algo2.candidate_word_list.size > 1 && algo3.candidate_word_list.size != 0) {
       ia_algo3();
@@ -877,7 +903,7 @@ void guess_word(struct algo_data* algo, char* word) {
   fprintf(stdout, "GUESS %s\n", word);
   fflush(stdout);
 
-  algo->last_word_proposed = word;
+  strcpy(algo->last_word_proposed, word);
 }
 
 int get_random_int_in_range(int min, int max) {
@@ -929,20 +955,30 @@ void print_decision() {
           fprintf(stderr, "5.3 \n");
           fflush(stderr);
           strongest_algo = &algo3;
-        } else {
+        } else if (algo1.candidate_word_list.size == 2) {
           fprintf(stderr, "5.4 \n");
+          fflush(stderr);
+          strongest_algo = &algo1;
+        } else {
+          fprintf(stderr, "5.5 \n");
           fflush(stderr);
           strongest_algo = NULL;
         }
 
         if (strongest_algo == NULL) {
-          fprintf(stderr, "5.5 \n");
+          fprintf(stderr, "5.6 \n");
           fflush(stderr);
           print_pass();
         } else {
-          fprintf(stderr, "mot que je guess : %s\n",strongest_algo->candidate_word_list.list[0].v);
+          int index_to_guess;
+          if (strongest_algo->candidate_word_list.size > 1) {
+            index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
+          } else {
+            index_to_guess = 0;
+          }
+          fprintf(stderr, "mot que je guess : %s\n",strongest_algo->candidate_word_list.list[index_to_guess].v);
           fflush(stderr);
-          guess_word(strongest_algo, strongest_algo->candidate_word_list.list[0].v);
+          guess_word(strongest_algo, strongest_algo->candidate_word_list.list[index_to_guess].v);
         }
       }
     } else {
@@ -1002,7 +1038,7 @@ void find_p(int start_index, int end_index, int index_sw) { // TODO : A optimise
         break;
       }
     }
-    
+
     if (goddess.p.founded == 1)
       break;
   }
@@ -1053,7 +1089,7 @@ int main() {
         if (game.state.is_me_founded == 0) {
           all_algo();
         }
-        if (*round == 0 && algo1.candidate_word_list.size == 1 && goddess.p.founded == 0)
+        if (goddess.p.founded == 0 && algo1.candidate_word_list.size == 1)
           find_p(0, list_concepts_of_round.size-1, find_word_index_in_sorted_list(algo1.candidate_word_list.list[0].v));
 
         print_decision();
@@ -1062,10 +1098,12 @@ int main() {
       game.state.turn++;
     }
 
-    if (*round == 0 && goddess.secret_words_index[0] != -1) {
+    if (goddess.secret_words_index[*round] != -1) { // we found the secret round at that round
       if (goddess.p.founded == 0)
-        find_p(0, NB_CONCEPT-1, goddess.secret_words_index[game.state.round]);
-      algo2_find_abc();
+        find_p(0, NB_CONCEPT-1, goddess.secret_words_index[*round]);
+      if (goddess.size_t_coeff == 0 && list_concepts_of_round.size > 2) {
+        algo2_find_abc();
+      }
     }
 
     reset_game_state();

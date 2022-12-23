@@ -1,3 +1,40 @@
+// Work by Laurent Ngeth
+/* EXPLICATION DES ALGORITHMES
+ * Il existe 3 algorithmes qui travaillent indépendamment les uns des autres :
+ *
+ * - Algo 1 : Cet algorithme utilise la connaissance du paramètre 'p' de la déesse pour trouver plus facilement le mot secret.
+ *            Il est celui qui à coup sûr possède, dans sa liste de mot candidat, le mot secret de la déesse.
+ *            Pour trouver le mot secret : pour chaque concept donné (donc à chaque 20 premiers tours du round), l'algorithme regarde si le concept fait partie
+ *            des '10 - p' moins scorés ou '10 + p' plus scorés concept. Si c'est pas le cas, on enlève le mot de la liste de mot possible pour cette technique.
+ *            Au début, on ne connait pas p, il regardera donc les 7 premiers et 17 derniers scores, cela permet de ne pas supprimer le mot secret
+ *            au prix d'en sélectionner plus.
+ *            --> L'algo sera plus efficace quand le paramètre 'p' est trouvé, c'est à dire normalement après le premier tour.
+ *
+ * - Algo 2 : Cet algorithme utilise les triplets de valeurs possibles de (a, b, c) valides parmi la liste les choix suivants { 5, 35, 65, 95 } pour deviner le mot secret.
+ *            Il existe donc au maximum 64 combinaisons possibles avec ces 4 valeurs, ce qui est moins long que [1, 100] pour chaque paramètre.
+ *            La détermination des coefficients valides se fait après la connaissance du mot secret du premier tour (éxécution de la fonction algo2_find_abc()). 
+ *            Si le mot secret du premier tour n'a pas été trouvé, l'algorithme 2 ne sera pas éxécuté pendant tout le reste du jeu.
+ *            Pour lister les coefficients possibles, l'algorithme regarde parmi les 3 premiers concepts du mot secret donné par la déesse et pour chaque triplet,
+ *            vérifie si le paramètre calculé suivant 't_val = a*score + 10*b*t + 10*b*u' pour ces 3 concepts permet de les ordonnés dans le même ordre que celui donné
+ *            par la déesse lorsqu'on trie ces 3 t_val de manière décroissantes. Si c'est le cas, le triplet en question est valide, sinon on ne le garde pas.
+ *            Puis lorsque l'algorithme possède une liste de coefficient possible (taille > 0), il regarde à chaque tour si les 2 derniers concepts donnés par la déesse 
+ *            permettent d'ordonner chaque mot de la liste de mot candidat restant selon la méthode calcul de t_val cité en haut. Si pour un mot donné, ce n'est pas ordonné,
+ *            on enlève le mot de la liste. Cela se fait donc à partir du tour 2, quand la déeese a donné 2 concepts.
+ *           --> Cet algorithme ne se lance que si la liste de combinaisons possibles est supérieur à 0 et peut ne pas avoir le mot secret dans sa liste.
+ *
+ * - Algo 3 : Cet algorithme fait une utilise les 2 premiers algorithmes cités en haut pour essayer de trouver le mot plus rapidement.
+ *            Il fait l'intersection entre les mots candidats de l'algo 1 et 2, puis avec sa propre liste qui n'est que la sauvegarde de l'intersection des listes
+ *            précédente.
+ *            Exemple : 
+ *              - 1er d'éxec de l'algo 3 : liste_algo1 /\ liste_algo2 = liste_algo3 
+ *              - 2e tour : liste_algo1 /\ liste_algo2 /\ liste_algo3 = liste_algo3
+ *              - etc...
+ *            --> Cet algorithme ne se lance que si l'algorithme 2 est éxécuté et peut ne pas avoir le mot secret dans sa liste.
+ *
+ * /!\ Si un algorithme possède une liste de mot candidat nulle, il ne sera plus éxécuté jusqu'à la fin de la manche.
+ *
+ */
+
 // import libraries
 #include <stdio.h>
 #include <stdlib.h>

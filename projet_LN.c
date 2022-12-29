@@ -95,10 +95,10 @@
 
 /** ALL PROTOTYPES **/
 /* Initialization & Free */
-// Global variables \\
+// Global variables
 void init_global_variables();
 void free_global_variables();
-// Temporary variables \\
+// Temporary variables
 void init_new_list_word(struct list_word*, int);
 void free_list_word(struct list_word*);
 
@@ -108,13 +108,13 @@ int t(char*, char*);
 int u(char*, char*);
 
 /* Struct/array manipulation */
-// getter \\
+// getter
 int find_word_index_in_sorted_list(char*);
 int find_score_concept_with_word_position(char*, int);
 int find_score_of_concept_by_word_position_in_algo_list(struct algo_data*, char*, int);
-// delete \\
+// delete
 void remove_word_from_algos_word_list(struct algo_data*, char*);
-// update \\
+// update
 void sort_concept_by_score_asc();
 void copy_sorted_list_in_algos(struct algo_data*);
 void copy_list_word_to_another(struct list_word*, struct list_word*);
@@ -136,13 +136,13 @@ void guess_word(struct algo_data*, char*);
 void print_decision();
 
 /* Algos */
-// algo1 \\
+// algo1
 void find_p(int, int, int);
 void ia_algo1();
-// algo2 \\
+// algo2
 void algo2_find_abc();
 void ia_algo2();
-// algo3 \\
+// algo3
 void ia_algo3();
 void all_algo();
 

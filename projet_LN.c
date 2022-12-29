@@ -2,36 +2,78 @@
 /* EXPLICATION DES ALGORITHMES
  * Il existe 3 algorithmes qui travaillent indépendamment les uns des autres :
  *
- * - Algo 1 : Cet algorithme utilise la connaissance du paramètre 'p' de la déesse pour trouver plus facilement le mot secret.
- *            Il est celui qui à coup sûr possède, dans sa liste de mot candidat, le mot secret de la déesse.
- *            Pour trouver le mot secret : pour chaque concept donné (donc à chaque 20 premiers tours du round), l'algorithme regarde si le concept fait partie
- *            des '10 - p' moins scorés ou '10 + p' plus scorés concept. Si c'est pas le cas, on enlève le mot de la liste de mot possible pour cette technique.
- *            Au début, on ne connait pas p, il regardera donc les 7 premiers et 17 derniers scores, cela permet de ne pas supprimer le mot secret
- *            au prix d'en sélectionner plus.
- *            --> L'algo sera plus efficace quand le paramètre 'p' est trouvé, c'est à dire normalement après le premier tour.
+ * -- Fonctionnement Algo 1 : 
+ *   !Caractéristiques!
+ *   - Utilise connaissance de 'p' pour trouver plus facilement le mot secret.
+ *   - Possède à coup sûr, dans sa liste de mot candidat, le mot secret de la déesse.
+ *   - Au début, on ne connait pas p, on regarde donc les 7 premiers et 17 derniers scores.
+ *     --> L'algo sera plus efficace quand le paramètre 'p' est trouvé, c'est à dire après avoir trouvé le mot secret du round.
+ *     --> Si pas mot secret pas trouvé au 1er round, la recherche de p continue au round suivant et ainsi de suite.
  *
- * - Algo 2 : Cet algorithme utilise les triplets de valeurs possibles de (a, b, c) valides parmi la liste les choix suivants { 5, 35, 65, 95 } pour deviner le mot secret.
- *            Il existe donc au maximum 64 combinaisons possibles avec ces 4 valeurs, ce qui est moins long que [1, 100] pour chaque paramètre.
- *            La détermination des coefficients valides se fait après la connaissance du mot secret du premier tour (éxécution de la fonction algo2_find_abc()).
- *            Si le mot secret du premier tour n'a pas été trouvé, l'algorithme 2 ne sera pas éxécuté pendant tout le reste du jeu.
- *            Pour lister les coefficients possibles, l'algorithme regarde parmi les 3 premiers concepts du mot secret donné par la déesse et pour chaque triplet,
- *            vérifie si le paramètre calculé suivant 't_val = a*score + 10*b*t + 10*b*u' pour ces 3 concepts permet de les ordonnés dans le même ordre que celui donné
- *            par la déesse lorsqu'on trie ces 3 t_val de manière décroissantes. Si c'est le cas, le triplet en question est valide, sinon on ne le garde pas.
- *            Puis lorsque l'algorithme possède une liste de coefficient possible (taille > 0), il regarde à chaque tour si les 2 derniers concepts donnés par la déesse
- *            permettent d'ordonner chaque mot de la liste de mot candidat restant selon la méthode calcul de t_val cité en haut. Si pour un mot donné, ce n'est pas ordonné,
- *            on enlève le mot de la liste. Cela se fait donc à partir du tour 2, quand la déeese a donné 2 concepts.
- *           --> Cet algorithme ne se lance que si la liste de combinaisons possibles est supérieur à 0 et peut ne pas avoir le mot secret dans sa liste.
+ *   !Logique GLOBALE en Pseudo-code!
+ *   - Récupération du dernier concept donnée par la déesse c_last
+ *   - Pour chaque mot, mot_i, restant de la liste de mot candidat :
+ *       - Si le concept c_last fait partie du range des '10 - p' moins scorés ou '10 + p' plus scorés concept de mot_i :
+ *         --> On garde le mot.
+ *       - Sinon, on ne le garde pas.
  *
- * - Algo 3 : Cet algorithme fait une utilise les 2 premiers algorithmes cités en haut pour essayer de trouver le mot plus rapidement.
- *            Il fait l'intersection entre les mots candidats de l'algo 1 et 2, puis avec sa propre liste qui n'est que la sauvegarde de l'intersection des listes
- *            précédente.
- *            Exemple :
- *              - 1er d'éxec de l'algo 3 : liste_algo1 /\ liste_algo2 = liste_algo3
- *              - 2e tour : liste_algo1 /\ liste_algo2 /\ liste_algo3 = liste_algo3
- *              - etc...
- *            --> Cet algorithme ne se lance que si l'algorithme 2 est éxécuté et peut ne pas avoir le mot secret dans sa liste.
  *
- * /!\ Si un algorithme possède une liste de mot candidat nulle, il ne sera plus éxécuté jusqu'à la fin de la manche.
+ * -- Fonctionnement Algo 2 : 
+ *   !Caractéristiques!
+ *   - Utilise les triplets de valeurs possibles de (a, b, c) valides parmi la liste de choix suivants : { 5, 35, 65, 95 }.
+ *   - Fonctionne en 2 étapes : 
+ *     1- Lister les coefficients possibles (fonction algo2_find_abc()) :
+ *       - 64 combinaisons possibles ==> moins long que [1, 100] pour chaque paramètre.
+ *       - listage à la fin de chaque round si on pas déjà lister le coefficient et qu'on a trouvé le mot secret.
+ *     2- Utilisation des coefficients valides pour supprimer des mots.
+ *       - Se lance quand on une liste de coeff > 0 et que la déesse a donné au moins 2 concepts (à partir tour 2).
+ *
+ *   !Logique GLOBALE en Pseudo-code!
+ *     Etape 1 : Lister les coefficients possibles
+ *     - Pour chaque triplet (a, b, c) possibles :
+ *       - garde_triplet = 0
+ *       - Pour les 3 premiers concepts donné par la déesse :
+ *         - Calcul t_val_concept_i = a*score + 10*b*t + 10*b*u
+ *       - Si t_val_concept_1 > t_val_concept_2 :
+ *         - Si t_val_concept_2 > t_val_concept_3 :
+ *           --> garde_triplet = 1
+ *       - Sinon (cas si t_val_concept_i = t_val_concept_j --> Ordre alphabétique) :
+ *         - etc...
+ *       - Si garde_triplet == 0:
+ *         --> On enlève de la liste des triplets possibles.
+ *
+ *      Etape 2 : Utilisation des coefficients
+ *      - Si taille de la liste de coefficient possibles > 0 :
+ *        - Pour chaque mot de la liste candidat possible :
+ *          - garde_mot = 0
+ *          - Pour les 2 derniers concepts donnés par la déesse :
+ *            - Pour chaque triplet (a, b, c) :
+ *              - Calcul t_val_concept_i = a*score + 10*b*t + 10*b*u
+ *              - Si t_val_concept_i > t_val_concept_j (avec i concept donné avant le concept j) :
+ *                --> garde_mot = 1
+ *              - Sinon si (même valeur --> Ordre alphabétique):
+ *                --> etc...
+ *          - Si garde_mot = 0 :
+ *            --> On enlève le mot de la liste.
+ *
+ *
+ * -- Fonctionnement Algo 3 :
+ *   !Caractéristiques!
+ *   - Utilise les 2 premiers algorithmes cités en haut pour essayer de trouver le mot plus rapidement.
+ *   - Il fait l'intersection entre les mots candidats de l'algo 1 et 2, puis avec sa propre liste (sauvegarde de l'intersection des listes au tour précédent).
+ *   --> Exécuté uniquement si algo2 éxécuté (quand liste algo2 > 0).
+ *   --> Peut ne pas avoir le mot secret dans sa liste.
+ *
+ *   !Logique GLOBALE en Pseudo-code!
+ *   - Si liste_algo1 > 0 && liste_algo2 > 0:
+ *   - Si tour = 1 :
+ *     --> liste_algo1 /\ liste_algo2 = liste_algo3
+ *   - Sinon :
+ *     --> liste_algo1 /\ liste_algo2 /\ liste_algo3 = liste_algo3
+ *
+ *
+ * -- Tous les algos :
+ *   - Si liste de mot candidat nulle, l'algo ne sera plus éxécuté jusqu'à la fin de la manche.
  *
  */
 

@@ -1,8 +1,8 @@
 // Work by Laurent Ngeth
-/* EXPLICATION DES ALGORITHMES
+/** EXPLICATION DES ALGORITHMES
  * Il existe 3 algorithmes qui travaillent indépendamment les uns des autres :
  *
- * -- Fonctionnement Algo 1 : 
+ * -- Fonctionnement Algo 1 :
  *   !Caractéristiques!
  *   - Utilise connaissance de 'p' pour trouver plus facilement le mot secret.
  *   - Possède à coup sûr, dans sa liste de mot candidat, le mot secret de la déesse.
@@ -18,10 +18,10 @@
  *       - Sinon, on ne le garde pas.
  *
  *
- * -- Fonctionnement Algo 2 : 
+ * -- Fonctionnement Algo 2 :
  *   !Caractéristiques!
  *   - Utilise les triplets de valeurs possibles de (a, b, c) valides parmi la liste de choix suivants : { 5, 35, 65, 95 }.
- *   - Fonctionne en 2 étapes : 
+ *   - Fonctionne en 2 étapes :
  *     1- Lister les coefficients possibles (fonction algo2_find_abc()) :
  *       - 64 combinaisons possibles ==> moins long que [1, 100] pour chaque paramètre.
  *       - listage à la fin de chaque round si on pas déjà lister le coefficient et qu'on a trouvé le mot secret.
@@ -93,59 +93,6 @@
 #define MAX_SIZE_WORD 25
 #define MAX_SIZE_CONCEPT 15
 
-/** ALL PROTOTYPES **/
-/* Initialization & Free */
-// Global variables
-void init_global_variables();
-void free_global_variables();
-// Temporary variables
-void init_new_list_word(struct list_word*, int);
-void free_list_word(struct list_word*);
-
-/* Math/calculation */
-int get_random_int_in_range(int, int);
-int t(char*, char*);
-int u(char*, char*);
-
-/* Struct/array manipulation */
-// getter
-int find_word_index_in_sorted_list(char*);
-int find_score_concept_with_word_position(char*, int);
-int find_score_of_concept_by_word_position_in_algo_list(struct algo_data*, char*, int);
-// delete
-void remove_word_from_algos_word_list(struct algo_data*, char*);
-// update
-void sort_concept_by_score_asc();
-void copy_sorted_list_in_algos(struct algo_data*);
-void copy_list_word_to_another(struct list_word*, struct list_word*);
-void reset_game_state();
-
-/* Scanf retrieve infos */
-void get_all_words_and_concepts();
-void get_round_infos();
-void get_turn_infos();
-void get_concept();
-
-/* Debug print */
-void print_all_valid_coeffs();
-void print_all_infos_candidate_word_list(struct list_word*);
-
-/* Output print */
-void print_pass();
-void guess_word(struct algo_data*, char*);
-void print_decision();
-
-/* Algos */
-// algo1
-void find_p(int, int, int);
-void ia_algo1();
-// algo2
-void algo2_find_abc();
-void ia_algo2();
-// algo3
-void ia_algo3();
-void all_algo();
-
 /* All structs */
 struct list_concept {
   char* list[NB_CONCEPT];
@@ -206,6 +153,59 @@ struct algo_data {
   struct list_word candidate_word_list;
   char* last_word_proposed;
 };
+
+/** ALL PROTOTYPES **/
+/* Initialization & Free */
+// Global variables
+void init_global_variables();
+void free_global_variables();
+// Temporary variables
+void init_new_list_word(struct list_word*, int);
+void free_list_word(struct list_word*);
+
+/* Math/calculation */
+int get_random_int_in_range(int, int);
+int t(char*, char*);
+int u(char*, char*);
+
+/* Struct/array manipulation */
+// getter
+int find_word_index_in_sorted_list(char*);
+int find_score_concept_with_word_position(char*, int);
+int find_score_of_concept_by_word_position_in_algo_list(struct algo_data*, char*, int);
+// delete
+void remove_word_from_algos_word_list(struct algo_data*, char*);
+// update
+void sort_concept_by_score_asc();
+void copy_sorted_list_in_algos(struct algo_data*);
+void copy_list_word_to_another(struct list_word*, struct list_word*);
+void reset_game_state();
+
+/* Scanf retrieve infos */
+void get_all_words_and_concepts();
+void get_round_infos();
+void get_turn_infos();
+void get_concept();
+
+/* Debug print */
+void print_all_valid_coeffs();
+void print_all_infos_candidate_word_list(struct list_word*);
+
+/* Output print */
+void print_pass();
+void guess_word(struct algo_data*, char*);
+void print_decision();
+
+/* Algos */
+// algo1
+void find_p(int, int, int);
+void ia_algo1();
+// algo2
+void algo2_find_abc();
+void ia_algo2();
+// algo3
+void ia_algo3();
+void all_algo();
 
 
 /** Global variables **/
@@ -354,7 +354,7 @@ void free_list_word(struct list_word* list) {
 /* Math/calculation */
 
 /** Generate a random integer from a certain range [min, max]
- * \param min the lower bound 
+ * \param min the lower bound
  * \param max the upper bound
  * \return a random number within range [min, max]
  */

@@ -152,7 +152,6 @@ struct list_concept {
   int size;
 };
 
-
 struct word {
   char* v;
   char* concepts[NB_CONCEPT];
@@ -163,7 +162,6 @@ struct list_word {
   struct word* list;
   int size;
 };
-
 
 struct player {
   int J; // Number player
@@ -185,7 +183,6 @@ struct game_config {
   struct game_state state;
 };
 
-
 struct p_val {
   int upper;
   int lower;
@@ -202,9 +199,8 @@ struct goddess_param {
   struct p_val p;
   struct coeffs* t_coeff;
   int size_t_coeff;
-  int secret_words_index[5];
+  int secret_words_index[5]; // all 5 rounds secret word's index in the initial_sorted_word_list
 };
-
 
 struct algo_data {
   struct list_word candidate_word_list;
@@ -212,9 +208,9 @@ struct algo_data {
 };
 
 
-/* Global variables */
-static struct list_word initial_sorted_word_list;
-static struct list_concept list_concepts_of_round;
+/** Global variables **/
+static struct list_word initial_sorted_word_list; // contains all words & in each word, all concepts in ascendent score order
+static struct list_concept list_concepts_of_round; // all 20 concepts gave by Goddess during a round
 static struct algo_data algo1; // only p strat
 static struct algo_data algo2; // only with (a, b, c) params
 static struct algo_data algo3; // with both p & (a, b, c)
@@ -222,14 +218,13 @@ static struct goddess_param goddess;
 static struct game_config game;
 static int possible_coeff[NB_COEFF] = {5, 35, 65, 95};
 
-void print_all_valid_coeffs() {
-  for (int i = 0; i < NB_COEFF*NB_COEFF*NB_COEFF; i++) {
-    fprintf(stderr, "a : %d, b : %d, c : %d\n", goddess.t_coeff[i].a, goddess.t_coeff[i].b, goddess.t_coeff[i].c);
-    fflush(stderr);
-  }
-}
 
-/* All functions */
+/** All functions **/
+
+/* Initialization & Free */
+
+/** Malloc all the global variables
+ */
 void init_global_variables() {
   list_concepts_of_round.size = 0;
   for (int i = 0; i < NB_TURN; i++) {
@@ -293,6 +288,8 @@ void init_global_variables() {
   // print_all_valid_coeffs();
 }
 
+/** Free all the global variables
+ */
 void free_global_variables() {
   for (int i = 0; i < NB_WORD; i++) {
     free(initial_sorted_word_list.list[i].v);
@@ -326,43 +323,141 @@ void free_global_variables() {
   free(game.players);
 }
 
-void get_all_words_and_concepts() {
-  char line[MAX_SIZE_WORD];
+/** Malloc a struct list_word passed in parameter
+ * \param list the address of the struct list_word to malloc
+ * \param size length of array to init
+ */
+void init_new_list_word(struct list_word* list, int size) {
+  list->list = malloc(size * sizeof(struct word));
+  for (int i = 0; i < size; i++) {
+    list->list[i].v = malloc(MAX_SIZE_WORD * sizeof(char));
+    for (int j = 0; j < NB_CONCEPT; j++) {
+      list->list[i].concepts[j] = malloc(MAX_SIZE_CONCEPT * sizeof(char));
+    }
+  }
+  list->size = 0;
+}
 
-  // Get all concepts
+/** Free a struct list_word passed in parameter
+ * \param list the address of the struct list_word to free
+ */
+void free_list_word(struct list_word* list) {
+  for (int i = 0; i < list->size; i++) {
+    free(list->list[i].v);
+    for (int j = 0; j < NB_CONCEPT; j++) {
+      free(list->list[i].concepts[j]);
+    }
+  }
+  free(list->list);
+}
+
+/* Math/calculation */
+
+/** Generate a random integer from a certain range [min, max]
+ * \param min the lower bound 
+ * \param max the upper bound
+ * \return a random number within range [min, max]
+ */
+int get_random_int_in_range(int min, int max) {
+  srand(time(0));
+  return (rand() % (max - min + 1)) + min;
+}
+
+/** Count the number of character that can be found from a string in another
+ * \param m the first string
+ * \param w the second string
+ * \return count of same character from both string
+ */
+int t(char* m, char* w) {
+  int count = 0;
+  for (int i = 0; i < (int) strlen(m); i++) {
+    for (int j = 0; j < (int) strlen(w); j++) {
+      if (m[i] == w[j] && m[i] != '\0')
+        count++;
+    }
+  }
+  return count;
+}
+
+/** Return the length's difference between two strings
+ * \param m first string
+ * \param w second string
+ * \return integer length's difference
+ */
+int u(char* m, char* w) {
+  return abs((int) strlen(m) - (int) strlen(w));
+}
+
+
+/* Struct/array manipulation */
+
+/** Get the index of a string inside the initial sorted list
+ * \param word string to find in sorted list
+ * \return index/position of the string in the initial sorted list
+ */
+int find_word_index_in_sorted_list(char* word) {
+  for (int i = 0; i < NB_WORD; i++) {
+    if (strcmp(word, initial_sorted_word_list.list[i].v) == 0) {
+      fprintf(stderr, "secret w : %s\n", initial_sorted_word_list.list[i].v);
+      fflush(stderr);
+      return i;
+    }
+  }
+  return -1;
+}
+
+/** Get the score of a concept with the word at the specified position in initial sorted list
+ * \param concept the interested concept
+ * \param w_pos the position of the word in the initial sorted list
+ * \return integer the score of the concept with the word at w_pos index
+ */
+int find_score_concept_with_word_position(char* concept, int w_pos) {
   for (int i = 0; i < NB_CONCEPT; i++) {
-    scanf("%s", line);
-
-    for (int j = 0; j < NB_WORD; j++) { // add each concept in every word
-      sscanf(line, "%s", initial_sorted_word_list.list[j].concepts[i]);
+    if (strcmp(initial_sorted_word_list.list[w_pos].concepts[i], concept)) {
+      return initial_sorted_word_list.list[w_pos].scores[i];
     }
   }
+  return -1; // TODO : tester l'erreur
+}
 
-  // Get all words
-  for (int i = 0; i < NB_WORD; i++) {
-    scanf("%s", line);
-    sscanf(line, "%s", initial_sorted_word_list.list[i].v);
+/** Get the score of an concept associated with the word at position i, in the wanted algo's candidate list
+ * \param algo the address of the interested struct algo_data to look
+ * \param concept the interested concept
+ * \param index the integer position of the word in the interested algo
+ * \return integer the score of the concept associated with the algo
+ */
+int find_score_of_concept_by_word_position_in_algo_list(struct algo_data* algo, char* concept, int index) {
+  for (int i = 0; i < NB_CONCEPT; i++) {
+    if (strcmp(algo->candidate_word_list.list[index].concepts[i], concept) == 0) {
+      return algo->candidate_word_list.list[index].scores[i];
+    }
+  }
+  return -1;
+}
 
-    for (int j = 0; j < NB_CONCEPT; j++) {
-      scanf("%s", line);
-      sscanf(line, "%d", &initial_sorted_word_list.list[i].scores[j]);
+/** Remove a word from a specified struct algo_data (Shift back all the next struct)
+ * \param algo the address of the interested struct algo_data
+ * \param word the word to remove
+ */
+void remove_word_from_algos_word_list(struct algo_data* algo, char* word) {
+  for (int i = 0; i < algo->candidate_word_list.size; i++) {
+    if (strcmp(algo->candidate_word_list.list[i].v, word) == 0) {
+      int last_element_index = (algo->candidate_word_list.size)-1;
+      for (int j = i; j < last_element_index; j++) {
+        strcpy(algo->candidate_word_list.list[j].v, algo->candidate_word_list.list[j+1].v);
+        for (int k = 0; k < NB_CONCEPT; k++) {
+          strcpy(algo->candidate_word_list.list[j].concepts[k], algo->candidate_word_list.list[j+1].concepts[k]);
+          algo->candidate_word_list.list[j].scores[k] = algo->candidate_word_list.list[j+1].scores[k];
+        }
+      }
+      algo->candidate_word_list.size = last_element_index;
+      break;
     }
   }
 }
 
-void print_all_infos_candidate_word_list(struct list_word* struct_list_to_print) {
-  for (int i = 0; i < NB_WORD; i++) {
-    for (int j = 0; j < NB_CONCEPT; j++) {
-      fprintf(stderr, "mot : %s, con : %s et s : %d\n", struct_list_to_print->list[i].v, struct_list_to_print->list[i].concepts[j], struct_list_to_print->list[i].scores[j]);
-      fflush(stderr);
-    }
-    if (i == 49) {
-      fprintf(stderr, "-----------------------------\n");
-      fflush(stderr);
-    }
-  }
-}
-
+/** Bubble sort of initial_sorted_word_list by score in ascending order
+ */
 void sort_concept_by_score_asc() {
   char* tmp_s = malloc(MAX_SIZE_CONCEPT * sizeof(char));
   for (int i = 0; i < NB_WORD; i++) {
@@ -394,6 +489,9 @@ void sort_concept_by_score_asc() {
   free(tmp_s);
 }
 
+/** Copy all the struct & values of initial_sorted_word_list into the specified algo
+ * \param algo the address of the interested struct algo_data
+ */
 void copy_sorted_list_in_algos(struct algo_data* algo) {
   for (int i = 0; i < NB_WORD; i++) {
     strcpy(algo->candidate_word_list.list[i].v, initial_sorted_word_list.list[i].v);
@@ -404,6 +502,23 @@ void copy_sorted_list_in_algos(struct algo_data* algo) {
   }
 }
 
+/** Copy all struct & values from a struct list_word to another
+ * \param to the destination address of struct list_word to copy to
+ * \param from the source address of struct list_word to copy from
+ */
+void copy_list_word_to_another(struct list_word* to, struct list_word* from) {
+  for (int i = 0; i < from->size; i++) {
+    strcpy(to->list[i].v, from->list[i].v);
+    for (int j = 0; j < NB_CONCEPT; j++) {
+      strcpy(to->list[i].concepts[j], from->list[i].concepts[j]);
+      to->list[i].scores[j] = from->list[i].scores[j];
+    }
+  }
+  to->size = from->size;
+}
+
+/** Reset to initial value some necessary global variables for the sake of the game
+ */
 void reset_game_state() {
   game.state.is_all_founded = 0;
   game.state.is_me_founded = 0;
@@ -424,6 +539,36 @@ void reset_game_state() {
   copy_sorted_list_in_algos(&algo3);
 }
 
+/* Scanf retrieve infos */
+
+/** Scan from the stdin all the 1000 words & for each word the 50 concepts string and score values into the initial sorted list
+ */
+void get_all_words_and_concepts() {
+  char line[MAX_SIZE_WORD];
+
+  // Get all concepts
+  for (int i = 0; i < NB_CONCEPT; i++) {
+    scanf("%s", line);
+
+    for (int j = 0; j < NB_WORD; j++) { // add each concept in every word
+      sscanf(line, "%s", initial_sorted_word_list.list[j].concepts[i]);
+    }
+  }
+
+  // Get all words
+  for (int i = 0; i < NB_WORD; i++) {
+    scanf("%s", line);
+    sscanf(line, "%s", initial_sorted_word_list.list[i].v);
+
+    for (int j = 0; j < NB_CONCEPT; j++) {
+      scanf("%s", line);
+      sscanf(line, "%d", &initial_sorted_word_list.list[i].scores[j]);
+    }
+  }
+}
+
+/** Scan from stdin all the round infos (J, P, END)
+ */
 void get_round_infos() {
   char line[MAX_SIZE_WORD];
   for (int nb_player = 0; nb_player < game.NJ; nb_player++) {
@@ -440,36 +585,7 @@ void get_round_infos() {
   }
 }
 
-int find_word_index_in_sorted_list(char* word) {
-  for (int i = 0; i < NB_WORD; i++) {
-    if (strcmp(word, initial_sorted_word_list.list[i].v) == 0) {
-      fprintf(stderr, "secret w : %s\n", initial_sorted_word_list.list[i].v);
-      fflush(stderr);
-      return i;
-    }
-  }
-  return -1;
-}
-
-void remove_word_from_algos_word_list(struct algo_data* algo, char* word) {
-  for (int i = 0; i < algo->candidate_word_list.size; i++) {
-    if (strcmp(algo->candidate_word_list.list[i].v, word) == 0) {
-      int last_element_index = (algo->candidate_word_list.size)-1;
-      for (int j = i; j < last_element_index; j++) {
-        strcpy(algo->candidate_word_list.list[j].v, algo->candidate_word_list.list[j+1].v);
-        for (int k = 0; k < NB_CONCEPT; k++) {
-          strcpy(algo->candidate_word_list.list[j].concepts[k], algo->candidate_word_list.list[j+1].concepts[k]);
-          algo->candidate_word_list.list[j].scores[k] = algo->candidate_word_list.list[j+1].scores[k];
-        }
-      }
-      algo->candidate_word_list.size = last_element_index;
-      break;
-    }
-  }
-}
-
-/* Get all players informations : can be (J P END) or (W J ST)
- *
+/** Scan from stdin all players informations : can be (J P END) or (W J ST)
  */
 void get_turn_infos() {
   char line[MAX_SIZE_WORD];
@@ -523,6 +639,8 @@ void get_turn_infos() {
   }
 }
 
+/** Scan from stdin the concept gave by the Goddess
+ */
 void get_concept() {
   char line[MAX_SIZE_CONCEPT];
   scanf("%s", line);
@@ -532,38 +650,196 @@ void get_concept() {
   list_concepts_of_round.size = new_size;
 }
 
-void init_new_list_word(struct list_word* list, int size) {
-  list->list = malloc(size * sizeof(struct word));
-  for (int i = 0; i < size; i++) {
-    list->list[i].v = malloc(MAX_SIZE_WORD * sizeof(char));
-    for (int j = 0; j < NB_CONCEPT; j++) {
-      list->list[i].concepts[j] = malloc(MAX_SIZE_CONCEPT * sizeof(char));
-    }
+
+/* Debug print */
+
+/** Print in stderr all triplets (a, b, c) kept
+ */
+void print_all_valid_coeffs() {
+  for (int i = 0; i < NB_COEFF*NB_COEFF*NB_COEFF; i++) {
+    fprintf(stderr, "a : %d, b : %d, c : %d\n", goddess.t_coeff[i].a, goddess.t_coeff[i].b, goddess.t_coeff[i].c);
+    fflush(stderr);
   }
-  list->size = 0;
 }
 
-void free_list_word(struct list_word* list) {
-  for (int i = 0; i < list->size; i++) {
-    free(list->list[i].v);
+/** Print in stderr the specified struct list_word for debug purposes
+ * \param struct_list_to_print the address of the interested struct list_word
+ */
+void print_all_infos_candidate_word_list(struct list_word* struct_list_to_print) {
+  for (int i = 0; i < NB_WORD; i++) {
     for (int j = 0; j < NB_CONCEPT; j++) {
-      free(list->list[i].concepts[j]);
+      fprintf(stderr, "mot : %s, con : %s et s : %d\n", struct_list_to_print->list[i].v, struct_list_to_print->list[i].concepts[j], struct_list_to_print->list[i].scores[j]);
+      fflush(stderr);
+    }
+    if (i == 49) {
+      fprintf(stderr, "-----------------------------\n");
+      fflush(stderr);
     }
   }
-  free(list->list);
 }
 
-void copy_list_word_to_another(struct list_word* to, struct list_word* from) {
-  for (int i = 0; i < from->size; i++) {
-    strcpy(to->list[i].v, from->list[i].v);
-    for (int j = 0; j < NB_CONCEPT; j++) {
-      strcpy(to->list[i].concepts[j], from->list[i].concepts[j]);
-      to->list[i].scores[j] = from->list[i].scores[j];
+
+/* Output print */
+
+/** Print the wanted pass string in stdout
+ */
+void print_pass() {
+  fprintf(stderr, "JE PASSE\n");
+  fflush(stderr);
+
+  fprintf(stdout, "PASS\n");
+  fflush(stdout);
+}
+
+/** Print the specified word string in stdout & store this string inside the wanted algo
+ * \param algo the address of the struct algo_data we want to save
+ * \param word the string to guess & to store
+ */
+void guess_word(struct algo_data* algo, char* word) {
+  fprintf(stderr, "JE GUESS : %s\n", word);
+  fflush(stderr);
+
+  fprintf(stdout, "GUESS %s\n", word);
+  fflush(stdout);
+
+  strcpy(algo->last_word_proposed, word);
+}
+
+/** Algorithm that decide either it prints pass or a word
+ */
+void print_decision() {
+  if (game.state.round == 0 || goddess.p.founded == 0) {
+    if (list_concepts_of_round.size < NB_TURN) {
+      if (goddess.p.founded == 1 && algo1.candidate_word_list.size == 1 && game.state.is_me_founded == 0) {
+        fprintf(stderr, "1 \n");
+        fflush(stderr);
+        guess_word(&algo1, algo1.candidate_word_list.list[0].v);
+      } else {
+        fprintf(stderr, "2 \n");
+        fflush(stderr);
+        print_pass();
+      }
+    } else {
+      if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
+        fprintf(stderr, "3 \n");
+        fflush(stderr);
+        int index_to_guess = get_random_int_in_range(0, algo1.candidate_word_list.size-1);
+        guess_word(&algo1, algo1.candidate_word_list.list[index_to_guess].v);
+      } else if (game.state.is_me_founded == 1 && game.state.round % 21 == 0) {
+        print_pass();
+      }
+    }
+  } else {
+    if (list_concepts_of_round.size <= NB_TURN) {
+      if (game.state.is_me_founded == 1) {
+        fprintf(stderr, "4 \n");
+        fflush(stderr);
+        print_pass();
+      } else {
+        fprintf(stderr, "5 \n");
+        fflush(stderr);
+        struct algo_data* strongest_algo;
+
+        int algo_num = 1;
+        strongest_algo = &algo1;
+        if (algo2.candidate_word_list.size > 0 && algo2.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
+          strongest_algo = &algo2;
+          algo_num = 2;
+        }
+        if (algo3.candidate_word_list.size > 0 && algo3.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
+          strongest_algo = &algo3;
+          algo_num = 3;
+        }
+
+        int index_to_guess;
+        if (strongest_algo->candidate_word_list.size > 1) {
+          index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
+        } else {
+          index_to_guess = 0;
+        }
+        fprintf(stderr, "De algo num %d\n", algo_num);
+        fflush(stderr);
+        guess_word(strongest_algo, strongest_algo->candidate_word_list.list[index_to_guess].v);
+      }
+    } else {
+      if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
+        fprintf(stderr, "6 \n");
+        fflush(stderr);
+        // Retrieve the algo that have the minest size of word possible
+        struct algo_data* less_worse_algo;
+        if (algo1.candidate_word_list.size <= algo2.candidate_word_list.size) {
+          less_worse_algo = &algo1;
+        } else {
+          less_worse_algo = &algo2;
+        }
+        if (algo3.candidate_word_list.size < less_worse_algo->candidate_word_list.size) {
+          less_worse_algo = &algo3;
+        }
+
+        int index_to_guess = get_random_int_in_range(0, less_worse_algo->candidate_word_list.size-1);
+        guess_word(less_worse_algo, less_worse_algo->candidate_word_list.list[index_to_guess].v);
+      }
     }
   }
-  to->size = from->size;
 }
 
+
+/* Algos */
+
+/** Algo to guess the 'p' param of the goddess
+ * Must be executed only if we know for sure what is the secret word
+ * Logic (for simplicity, index from [1,50]) :
+ *   - if the concept is at position 5, that means that the concept is one of the lowest score --> the 'max score concept' indexes can't go lower than index (50-15 =) 35.
+ *   - And at contrary, if concept is at 35, the upper bound can't go higher than (10 - 5 =) 5.
+ * With that, we can kind of play with the p bound from [3, 7] until the upper == lower which will correspond to the final p value of the goddess.
+ *
+ * \param start_index the index of the lower bound range
+ * \param end_index the index of the upper bound range
+ * \param index_sw the secret word's index in initial_sorted_word_list of the actual round
+ */
+void find_p(int start_index, int end_index, int index_sw) { // TODO : A optimiser
+  // goddess.secret_words_index[game.state.round];
+
+  for (int i = start_index; i < end_index+1; i++) {
+    for (int j = 0; j < NB_CONCEPT; j++) {
+      if (strcmp(list_concepts_of_round.list[i], initial_sorted_word_list.list[index_sw].concepts[j]) == 0) {
+        if (j == 6) {
+          goddess.p.upper = 3;
+          goddess.p.lower = 3;
+          goddess.p.founded = 1;
+        } else if (j == 33) {
+          goddess.p.upper = 7;
+          goddess.p.lower = 7;
+          goddess.p.founded = 1;
+        } else {
+          if (j < 7) { // Lower bound
+            if (j > 2 && (10 - (j + 1)) < goddess.p.upper) {
+              goddess.p.upper = (10 - (j + 1));
+            }
+          } else { // Upper bound
+            if (j < 37 && (((NB_CONCEPT-1)-(j-1)) - 10) > goddess.p.lower) {
+              goddess.p.lower = ((NB_CONCEPT-1)-(j-1)) - 10;
+            }
+          }
+        }
+
+        if (goddess.p.lower == goddess.p.upper) {
+          goddess.p.founded = 1;
+        }
+        break;
+      }
+    }
+
+    if (goddess.p.founded == 1)
+      break;
+  }
+
+  fprintf(stderr, "p : [%d, %d]\n", goddess.p.lower, goddess.p.upper);
+  fflush(stderr);
+}
+
+/** The algorithm 1 which plays with the p parameter to find the secret word.
+*/
 void ia_algo1() {
   clock_t tps;
   tps = clock();
@@ -617,200 +893,7 @@ void ia_algo1() {
   fflush(stderr);
 }
 
-/**
- \ Find the score of an concept associated with the word at position i, in the wanted algo's candidate list
- \
- */
-int find_score_of_concept_by_word_position_in_algo_list(struct algo_data* algo, char* concept, int index) {
-  for (int i = 0; i < NB_CONCEPT; i++) {
-    if (strcmp(algo->candidate_word_list.list[index].concepts[i], concept) == 0) {
-      return algo->candidate_word_list.list[index].scores[i];
-    }
-  }
-  return -1;
-}
-
-void ia_algo2() {
-  clock_t tps;
-  tps = clock();
-
-  int algo2_list_size = algo2.candidate_word_list.size;
-
-  fprintf(stderr, "Algo 2 début : %d\n", algo2.candidate_word_list.size);
-  fflush(stderr);
-
-  struct list_word new_candidat_list;
-  init_new_list_word(&new_candidat_list, algo2_list_size);
-
-  char last_two_concept[2][MAX_SIZE_CONCEPT];
-  strcpy(last_two_concept[0], list_concepts_of_round.list[list_concepts_of_round.size - 2]); // 1 before last concept
-  strcpy(last_two_concept[1], list_concepts_of_round.list[list_concepts_of_round.size - 1]); // last concept
-
-  for (int i = 0; i < algo2_list_size; i++) {
-    int remove_word = 1;
-
-    for (int j = 0; j < goddess.size_t_coeff; j++) {
-      int t_val_last_2_concept[2];
-      int score_last_2_concept[2];
-
-      for (int k = 0; k < 2; k++) {
-        score_last_2_concept[k] = find_score_of_concept_by_word_position_in_algo_list(&algo2, last_two_concept[k], i);
-        t_val_last_2_concept[k] = goddess.t_coeff[j].a * score_last_2_concept[k] + 10 * goddess.t_coeff[j].b * t(last_two_concept[k], algo2.candidate_word_list.list[i].v) + 10 * goddess.t_coeff[j].c * u(last_two_concept[k], algo2.candidate_word_list.list[i].v);
-      }
-
-      if (t_val_last_2_concept[0] > t_val_last_2_concept[1]) {
-        remove_word = 0;
-        break;
-      } else if (t_val_last_2_concept[0] == t_val_last_2_concept[1]) { // TODO : vérifier avec cette condition
-        if (strcmp(last_two_concept[0], last_two_concept[1]) == -1) { // if the 2 concepts have the same t_val, the first concept must be first alphabetically
-          remove_word = 0;
-          break;
-        }
-      }
-    }
-
-    if (remove_word == 0) { // We keep the word
-      int new_size = new_candidat_list.size;
-      strcpy(new_candidat_list.list[new_size].v, algo2.candidate_word_list.list[i].v);
-      for (int j = 0; j < NB_CONCEPT; j++) {
-        strcpy(new_candidat_list.list[new_size].concepts[j], algo2.candidate_word_list.list[i].concepts[j]);
-        new_candidat_list.list[new_size].scores[j] = algo2.candidate_word_list.list[i].scores[j];
-      }
-      new_candidat_list.size++;
-    }
-  }
-
-  copy_list_word_to_another(&(algo2.candidate_word_list), &new_candidat_list);
-  free_list_word(&new_candidat_list);
-
-  fprintf(stderr, "(Algo 2) Nombre restant : %d\n", algo2.candidate_word_list.size);
-  fflush(stderr);
-
-  tps = clock() - tps;
-  double time_taken = ((double)tps)/CLOCKS_PER_SEC;
-  fprintf(stderr, "Temps d'éxécution de l'algo 2: %f sec\n", time_taken);
-  fflush(stderr);
-}
-
-void ia_algo3() {
-  clock_t tps;
-  tps = clock();
-
-  fprintf(stderr, "Algo 3 début : %d\n", algo3.candidate_word_list.size);
-  fflush(stderr);
-
-  struct algo_data* smaller;
-  struct algo_data* bigger;
-
-  if (algo1.candidate_word_list.size >= algo2.candidate_word_list.size) {
-    bigger = &algo1;
-    smaller = &algo2;
-  } else {
-    bigger = &algo2;
-    smaller = &algo1;
-  }
-
-  int smaller_size = smaller->candidate_word_list.size;
-
-  struct list_word intersection_of_candidate_word;
-  init_new_list_word(&intersection_of_candidate_word, smaller_size);
-
-  for (int i = 0; i < smaller->candidate_word_list.size; i++) {
-    for (int j = 0; j < bigger->candidate_word_list.size; j++) {
-      if (strcmp(smaller->candidate_word_list.list[i].v, bigger->candidate_word_list.list[j].v) == 0) {
-        strcpy(intersection_of_candidate_word.list[intersection_of_candidate_word.size].v, smaller->candidate_word_list.list[i].v);
-        for (int k = 0; k < NB_CONCEPT; k++) {
-          strcpy(intersection_of_candidate_word.list[intersection_of_candidate_word.size].concepts[k], smaller->candidate_word_list.list[i].concepts[k]);
-          intersection_of_candidate_word.list[intersection_of_candidate_word.size].scores[k] = smaller->candidate_word_list.list[i].scores[k];
-        }
-        intersection_of_candidate_word.size++;
-        break;
-      }
-    }
-  }
-
-  struct list_word* smaller_lw;
-  struct list_word* bigger_lw;
-  if (intersection_of_candidate_word.size >= algo3.candidate_word_list.size) {
-    bigger_lw = &intersection_of_candidate_word;
-    smaller_lw = &algo3.candidate_word_list;
-  } else {
-    smaller_lw = &intersection_of_candidate_word;
-    bigger_lw = &algo3.candidate_word_list;
-  }
-
-  smaller_size = smaller_lw->size;
-  struct list_word final_inter_of_candidate_word;
-  init_new_list_word(&final_inter_of_candidate_word, smaller_size);
-
-  for (int i = 0; i < smaller_lw->size; i++) {
-    for (int j = 0; j < bigger_lw->size; j++) {
-      if (strcmp(smaller_lw->list[i].v, bigger_lw->list[j].v) == 0) {
-        strcpy(final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].v, smaller_lw->list[i].v);
-        for (int k = 0; k < NB_CONCEPT; k++) {
-          strcpy(final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].concepts[k], smaller_lw->list[i].concepts[k]);
-          final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].scores[k] = smaller_lw->list[i].scores[k];
-        }
-        final_inter_of_candidate_word.size++;
-        break;
-      }
-    }
-  }
-
-  // Copy the final intersection into the algo3 candidate word list
-  struct list_word* algo_to_keep;
-  if (final_inter_of_candidate_word.size != 0) {
-    algo_to_keep = &final_inter_of_candidate_word;
-  } else {
-    algo_to_keep = &intersection_of_candidate_word;
-  }
-
-  if (algo_to_keep->size == 0) { // that means that algo 2 has no commum words with algo1: Algo 2 made a mistake !! No need to use algo2 and 3 anymore
-    algo2.candidate_word_list.size = 0;
-    algo3.candidate_word_list.size = 0;
-    fprintf(stderr, "Algo 2 et 3 ne sont plus valides !\n");
-    fflush(stderr);
-  } else {
-    copy_list_word_to_another(&(algo3.candidate_word_list), algo_to_keep);
-  }
-  free_list_word(&intersection_of_candidate_word);
-  free_list_word(&final_inter_of_candidate_word);
-
-  fprintf(stderr, "(Algo 3) Nombre restant : %d\n", algo3.candidate_word_list.size);
-  fflush(stderr);
-
-  tps = clock() - tps;
-  double time_taken = ((double)tps)/CLOCKS_PER_SEC;
-  fprintf(stderr, "Temps d'éxécution de l'algo 3: %f sec\n", time_taken);
-  fflush(stderr);
-}
-
-int find_score_concept_with_word_position(char* concept, int w_pos) {
-  for (int i = 0; i < NB_CONCEPT; i++) {
-    if (strcmp(initial_sorted_word_list.list[w_pos].concepts[i], concept)) {
-      return initial_sorted_word_list.list[w_pos].scores[i];
-    }
-  }
-  return -1; // TODO : tester l'erreur
-}
-
-int t(char* m, char* w) {
-  int count = 0;
-  for (int i = 0; i < (int) strlen(m); i++) {
-    for (int j = 0; j < (int) strlen(w); j++) {
-      if (m[i] == w[j] && m[i] != '\0')
-        count++;
-    }
-  }
-  return count;
-}
-
-int u(char* m, char* w) {
-  return abs((int) strlen(m) - (int) strlen(w));
-}
-
-/* Algo 2 to find goddess param (a, b, c)
- * Only to use at the end of round when we don't have coeffs
+/** First part of algo 2 that list all the triplets (a, b, c) that order the first 3 concepts gave by the Goddess, correctly.
  */
 void algo2_find_abc() {
   // TODO : Créer une fonction qui réinitialise les coeffs à l'initiale
@@ -915,6 +998,173 @@ void algo2_find_abc() {
   */
 }
 
+/** The algorithm 2 which plays with triplets of (a, b, c) to find the secret word.
+*/
+void ia_algo2() {
+  clock_t tps;
+  tps = clock();
+
+  int algo2_list_size = algo2.candidate_word_list.size;
+
+  fprintf(stderr, "Algo 2 début : %d\n", algo2.candidate_word_list.size);
+  fflush(stderr);
+
+  struct list_word new_candidat_list;
+  init_new_list_word(&new_candidat_list, algo2_list_size);
+
+  char last_two_concept[2][MAX_SIZE_CONCEPT];
+  strcpy(last_two_concept[0], list_concepts_of_round.list[list_concepts_of_round.size - 2]); // 1 before last concept
+  strcpy(last_two_concept[1], list_concepts_of_round.list[list_concepts_of_round.size - 1]); // last concept
+
+  for (int i = 0; i < algo2_list_size; i++) {
+    int remove_word = 1;
+
+    for (int j = 0; j < goddess.size_t_coeff; j++) {
+      int t_val_last_2_concept[2];
+      int score_last_2_concept[2];
+
+      for (int k = 0; k < 2; k++) {
+        score_last_2_concept[k] = find_score_of_concept_by_word_position_in_algo_list(&algo2, last_two_concept[k], i);
+        t_val_last_2_concept[k] = goddess.t_coeff[j].a * score_last_2_concept[k] + 10 * goddess.t_coeff[j].b * t(last_two_concept[k], algo2.candidate_word_list.list[i].v) + 10 * goddess.t_coeff[j].c * u(last_two_concept[k], algo2.candidate_word_list.list[i].v);
+      }
+
+      if (t_val_last_2_concept[0] > t_val_last_2_concept[1]) {
+        remove_word = 0;
+        break;
+      } else if (t_val_last_2_concept[0] == t_val_last_2_concept[1]) { // TODO : vérifier avec cette condition
+        if (strcmp(last_two_concept[0], last_two_concept[1]) == -1) { // if the 2 concepts have the same t_val, the first concept must be first alphabetically
+          remove_word = 0;
+          break;
+        }
+      }
+    }
+
+    if (remove_word == 0) { // We keep the word
+      int new_size = new_candidat_list.size;
+      strcpy(new_candidat_list.list[new_size].v, algo2.candidate_word_list.list[i].v);
+      for (int j = 0; j < NB_CONCEPT; j++) {
+        strcpy(new_candidat_list.list[new_size].concepts[j], algo2.candidate_word_list.list[i].concepts[j]);
+        new_candidat_list.list[new_size].scores[j] = algo2.candidate_word_list.list[i].scores[j];
+      }
+      new_candidat_list.size++;
+    }
+  }
+
+  copy_list_word_to_another(&(algo2.candidate_word_list), &new_candidat_list);
+  free_list_word(&new_candidat_list);
+
+  fprintf(stderr, "(Algo 2) Nombre restant : %d\n", algo2.candidate_word_list.size);
+  fflush(stderr);
+
+  tps = clock() - tps;
+  double time_taken = ((double)tps)/CLOCKS_PER_SEC;
+  fprintf(stderr, "Temps d'éxécution de l'algo 2: %f sec\n", time_taken);
+  fflush(stderr);
+}
+
+/** The algorithm 3 which plays with intersection of candidate_word_list of algo1 & 2 to have its own list.
+ */
+void ia_algo3() {
+  clock_t tps;
+  tps = clock();
+
+  fprintf(stderr, "Algo 3 début : %d\n", algo3.candidate_word_list.size);
+  fflush(stderr);
+
+  struct algo_data* smaller;
+  struct algo_data* bigger;
+
+  if (algo1.candidate_word_list.size >= algo2.candidate_word_list.size) {
+    bigger = &algo1;
+    smaller = &algo2;
+  } else {
+    bigger = &algo2;
+    smaller = &algo1;
+  }
+
+  int smaller_size = smaller->candidate_word_list.size;
+
+  struct list_word intersection_of_candidate_word;
+  init_new_list_word(&intersection_of_candidate_word, smaller_size);
+
+  for (int i = 0; i < smaller->candidate_word_list.size; i++) {
+    for (int j = 0; j < bigger->candidate_word_list.size; j++) {
+      if (strcmp(smaller->candidate_word_list.list[i].v, bigger->candidate_word_list.list[j].v) == 0) {
+        strcpy(intersection_of_candidate_word.list[intersection_of_candidate_word.size].v, smaller->candidate_word_list.list[i].v);
+        for (int k = 0; k < NB_CONCEPT; k++) {
+          strcpy(intersection_of_candidate_word.list[intersection_of_candidate_word.size].concepts[k], smaller->candidate_word_list.list[i].concepts[k]);
+          intersection_of_candidate_word.list[intersection_of_candidate_word.size].scores[k] = smaller->candidate_word_list.list[i].scores[k];
+        }
+        intersection_of_candidate_word.size++;
+        break;
+      }
+    }
+  }
+
+  struct list_word* smaller_lw;
+  struct list_word* bigger_lw;
+  if (intersection_of_candidate_word.size >= algo3.candidate_word_list.size) {
+    bigger_lw = &intersection_of_candidate_word;
+    smaller_lw = &algo3.candidate_word_list;
+  } else {
+    smaller_lw = &intersection_of_candidate_word;
+    bigger_lw = &algo3.candidate_word_list;
+  }
+
+  smaller_size = smaller_lw->size;
+  struct list_word final_inter_of_candidate_word;
+  init_new_list_word(&final_inter_of_candidate_word, smaller_size);
+
+  for (int i = 0; i < smaller_lw->size; i++) {
+    for (int j = 0; j < bigger_lw->size; j++) {
+      if (strcmp(smaller_lw->list[i].v, bigger_lw->list[j].v) == 0) {
+        strcpy(final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].v, smaller_lw->list[i].v);
+        for (int k = 0; k < NB_CONCEPT; k++) {
+          strcpy(final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].concepts[k], smaller_lw->list[i].concepts[k]);
+          final_inter_of_candidate_word.list[final_inter_of_candidate_word.size].scores[k] = smaller_lw->list[i].scores[k];
+        }
+        final_inter_of_candidate_word.size++;
+        break;
+      }
+    }
+  }
+
+  // Copy the final intersection into the algo3 candidate word list
+  struct list_word* algo_to_keep;
+  if (final_inter_of_candidate_word.size != 0) {
+    algo_to_keep = &final_inter_of_candidate_word;
+  } else {
+    algo_to_keep = &intersection_of_candidate_word;
+  }
+
+  if (algo_to_keep->size == 0) { // that means that algo 2 has no commum words with algo1: Algo 2 made a mistake !! No need to use algo2 and 3 anymore
+    algo2.candidate_word_list.size = 0;
+    algo3.candidate_word_list.size = 0;
+    fprintf(stderr, "Algo 2 et 3 ne sont plus valides !\n");
+    fflush(stderr);
+  } else {
+    copy_list_word_to_another(&(algo3.candidate_word_list), algo_to_keep);
+  }
+  free_list_word(&intersection_of_candidate_word);
+  free_list_word(&final_inter_of_candidate_word);
+
+  fprintf(stderr, "(Algo 3) Nombre restant : %d\n", algo3.candidate_word_list.size);
+  fflush(stderr);
+
+  tps = clock() - tps;
+  double time_taken = ((double)tps)/CLOCKS_PER_SEC;
+  fprintf(stderr, "Temps d'éxécution de l'algo 3: %f sec\n", time_taken);
+  fflush(stderr);
+}
+
+/** The function that select which Algo to execute depending on several criterias
+ * algo 1:
+ *  - executed every time
+ * algo 2 if :
+ *  - after first round & have at least one triplets (a, b, c) valid & have at least one concept gave by goddess & not empty candidate word list & p param is founded
+ * algo 3 if :
+ *  - algo 2 is working & candidate word list of algo 1, 2 and its own are not empty
+ */
 void all_algo() {
   clock_t t;
   t = clock();
@@ -944,150 +1194,6 @@ void all_algo() {
   t = clock() - t;
   double time_taken = ((double)t)/(CLOCKS_PER_SEC/1000);
   fprintf(stderr, "Temps d'éxécution : %f milli\n", time_taken);
-  fflush(stderr);
-}
-
-/* All print methods */
-void print_pass() {
-  fprintf(stderr, "JE PASSE\n");
-  fflush(stderr);
-
-  fprintf(stdout, "PASS\n");
-  fflush(stdout);
-}
-
-void guess_word(struct algo_data* algo, char* word) {
-  fprintf(stderr, "JE GUESS : %s\n", word);
-  fflush(stderr);
-
-  fprintf(stdout, "GUESS %s\n", word);
-  fflush(stdout);
-
-  strcpy(algo->last_word_proposed, word);
-}
-
-int get_random_int_in_range(int min, int max) {
-  srand(time(0));
-  return (rand() % (max - min + 1)) + min;
-}
-
-void print_decision() {
-  if (game.state.round == 0 || goddess.p.founded == 0) {
-    if (list_concepts_of_round.size < NB_TURN) {
-      if (goddess.p.founded == 1 && algo1.candidate_word_list.size == 1 && game.state.is_me_founded == 0) {
-        fprintf(stderr, "1 \n");
-        fflush(stderr);
-        guess_word(&algo1, algo1.candidate_word_list.list[0].v);
-      } else {
-        fprintf(stderr, "2 \n");
-        fflush(stderr);
-        print_pass();
-      }
-    } else {
-      if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
-        fprintf(stderr, "3 \n");
-        fflush(stderr);
-        int index_to_guess = get_random_int_in_range(0, algo1.candidate_word_list.size-1);
-        guess_word(&algo1, algo1.candidate_word_list.list[index_to_guess].v);
-      } else if (game.state.is_me_founded == 1 && game.state.round % 21 == 0) {
-        print_pass();
-      }
-    }
-  } else {
-    if (list_concepts_of_round.size <= NB_TURN) {
-      if (game.state.is_me_founded == 1) {
-        fprintf(stderr, "4 \n");
-        fflush(stderr);
-        print_pass();
-      } else {
-        fprintf(stderr, "5 \n");
-        fflush(stderr);
-        struct algo_data* strongest_algo;
-
-        int algo_num = 1;
-        strongest_algo = &algo1;
-        if (algo2.candidate_word_list.size > 0 && algo2.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
-          strongest_algo = &algo2;
-          algo_num = 2;
-        }
-        if (algo3.candidate_word_list.size > 0 && algo3.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
-          strongest_algo = &algo3;
-          algo_num = 3;
-        }
-
-        int index_to_guess;
-        if (strongest_algo->candidate_word_list.size > 1) {
-          index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
-        } else {
-          index_to_guess = 0;
-        }
-        fprintf(stderr, "De algo num %d\n", algo_num);
-        fflush(stderr);
-        guess_word(strongest_algo, strongest_algo->candidate_word_list.list[index_to_guess].v);
-      }
-    } else {
-      if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
-        fprintf(stderr, "6 \n");
-        fflush(stderr);
-        // Retrieve the algo that have the minest size of word possible
-        struct algo_data* less_worse_algo;
-        if (algo1.candidate_word_list.size <= algo2.candidate_word_list.size) {
-          less_worse_algo = &algo1;
-        } else {
-          less_worse_algo = &algo2;
-        }
-        if (algo3.candidate_word_list.size < less_worse_algo->candidate_word_list.size) {
-          less_worse_algo = &algo3;
-        }
-
-        int index_to_guess = get_random_int_in_range(0, less_worse_algo->candidate_word_list.size-1);
-        guess_word(less_worse_algo, less_worse_algo->candidate_word_list.list[index_to_guess].v);
-      }
-    }
-  }
-}
-
-/* Algo to guess the 'p' param of the goddess
- * Supposed to only be executed at the end of first round
- */
-void find_p(int start_index, int end_index, int index_sw) { // TODO : A optimiser
-  // goddess.secret_words_index[game.state.round];
-
-  for (int i = start_index; i < end_index+1; i++) {
-    for (int j = 0; j < NB_CONCEPT; j++) {
-      if (strcmp(list_concepts_of_round.list[i], initial_sorted_word_list.list[index_sw].concepts[j]) == 0) {
-        if (j == 6) {
-          goddess.p.upper = 3;
-          goddess.p.lower = 3;
-          goddess.p.founded = 1;
-        } else if (j == 33) {
-          goddess.p.upper = 7;
-          goddess.p.lower = 7;
-          goddess.p.founded = 1;
-        } else {
-          if (j < 7) { // Lower bound
-            if (j > 2 && (10 - (j + 1)) < goddess.p.upper) {
-              goddess.p.upper = (10 - (j + 1));
-            }
-          } else { // Upper bound
-            if (j < 37 && (((NB_CONCEPT-1)-(j-1)) - 10) > goddess.p.lower) {
-              goddess.p.lower = ((NB_CONCEPT-1)-(j-1)) - 10;
-            }
-          }
-        }
-
-        if (goddess.p.lower == goddess.p.upper) {
-          goddess.p.founded = 1;
-        }
-        break;
-      }
-    }
-
-    if (goddess.p.founded == 1)
-      break;
-  }
-
-  fprintf(stderr, "p : [%d, %d]\n", goddess.p.lower, goddess.p.upper);
   fflush(stderr);
 }
 

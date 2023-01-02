@@ -216,7 +216,8 @@ static struct algo_data algo2; // only with (a, b, c) params
 static struct algo_data algo3; // with both p & (a, b, c)
 static struct goddess_param goddess;
 static struct game_config game;
-static int possible_coeff[NB_COEFF] = {5, 35, 65, 95};
+static int possible_coeff[NB_COEFF] = { 5, 35, 65, 95 };
+static char secret_word_save[MAX_SIZE_WORD];
 
 
 /** All functions **/
@@ -526,6 +527,7 @@ void reset_game_state() {
   memset(algo1.last_word_proposed, 0, MAX_SIZE_WORD);
   memset(algo2.last_word_proposed, 0, MAX_SIZE_WORD);
   memset(algo3.last_word_proposed, 0, MAX_SIZE_WORD);
+  memset(secret_word_save, 0, MAX_SIZE_WORD);
 
   // reset the list of concept
   list_concepts_of_round.size = 0;
@@ -604,7 +606,13 @@ void get_turn_infos() {
       game.players[sec_info].ST = third_info;
 
       if (goddess.secret_words_index[game.state.round] == -1) { // Save the index of the secret word of the round
-        goddess.secret_words_index[game.state.round] = find_word_index_in_sorted_list(algo1.last_word_proposed);
+        char* word_to_save;
+        if (algo1.candidate_word_list.size > 0) {
+          word_to_save = algo1.last_word_proposed;
+        } else {
+          word_to_save = secret_word_save;
+        }
+        goddess.secret_words_index[game.state.round] = find_word_index_in_sorted_list(word_to_save);
       }
 
       fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
@@ -721,10 +729,16 @@ void print_decision() {
       }
     } else {
       if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
-        fprintf(stderr, "3 \n");
-        fflush(stderr);
-        int index_to_guess = get_random_int_in_range(0, algo1.candidate_word_list.size-1);
-        guess_word(&algo1, algo1.candidate_word_list.list[index_to_guess].v);
+        if (algo1.candidate_word_list.size > 0) {
+          fprintf(stderr, "3.1 \n");
+          fflush(stderr);
+          int index_to_guess = get_random_int_in_range(0, algo1.candidate_word_list.size-1);
+          guess_word(&algo1, algo1.candidate_word_list.list[index_to_guess].v);
+        } else { // in case all concepts erased every possible word
+          fprintf(stderr, "3.2 \n");
+          fflush(stderr);
+          guess_word(&algo1, secret_word_save);
+        }
       } else if (game.state.is_me_founded == 1 && game.state.round % 21 == 0) {
         print_pass();
       }
@@ -886,6 +900,9 @@ void ia_algo1() {
 
   fprintf(stderr, "(Algo 1) Nombre restant : %d\n", algo1.candidate_word_list.size);
   fflush(stderr);
+
+  if (algo1.candidate_word_list.size == 1) // save word in case all concepts gave erase every word (should not be possible however, I saw it happened once)
+    strcpy(secret_word_save, algo1.candidate_word_list.list[0].v);
 
   tps = clock() - tps;
   double time_taken = ((double)tps)/CLOCKS_PER_SEC;
@@ -1172,7 +1189,7 @@ void all_algo() {
   ia_algo1();
   if (game.state.round != 0 && goddess.size_t_coeff > 0 && list_concepts_of_round.size > 1 && algo2.candidate_word_list.size > 0 && goddess.p.founded == 1) {
     if (list_concepts_of_round.size == 2) { // copy candidate_word_list of algo1 in algo2 & algo3
-      for (int i = 0; i < NB_WORD; i++) { // TODO : À modifier
+      for (int i = 0; i < NB_WORD; i++) { // do both copy in same loop is more effective than using a function to copy individually
         strcpy(algo2.candidate_word_list.list[i].v, algo1.candidate_word_list.list[i].v);
         strcpy(algo3.candidate_word_list.list[i].v, algo1.candidate_word_list.list[i].v);
         for (int j = 0; j < NB_CONCEPT; j++) {

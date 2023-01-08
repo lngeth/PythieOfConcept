@@ -370,7 +370,9 @@ int get_random_int_in_range(int min, int max) {
   return (rand() % (max - min + 1)) + min;
 }
 
-// TODO : documentation
+/** Return the index of the word that has the maximum t_value, condition that its t_value is lower than the t_value of the last concept gave by the goddess
+ * \param algo the algo to retrieve word index
+ */
 int get_index_word_based_on_abc(struct algo_data* algo) {
   int t_val_tab[algo->candidate_word_list.size];
   int t_index_tab[algo->candidate_word_list.size];

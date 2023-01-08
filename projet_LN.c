@@ -165,6 +165,7 @@ void free_list_word(struct list_word*);
 
 /* Math/calculation */
 int get_random_int_in_range(int, int);
+int get_index_word_based_on_abc(struct algo_data*);
 int t(char*, char*);
 int u(char*, char*);
 
@@ -218,6 +219,7 @@ static struct goddess_param goddess;
 static struct game_config game;
 static int possible_coeff[NB_COEFF] = { 5, 35, 65, 95 };
 static char secret_word_save[MAX_SIZE_WORD];
+static struct coeffs mean_coeffs;
 
 
 /** All functions **/
@@ -285,6 +287,10 @@ void init_global_variables() {
     }
   }
   goddess.size_t_coeff = new_size_t_coeff;
+
+  mean_coeffs.a = 0;
+  mean_coeffs.b = 0;
+  mean_coeffs.c = 0;
 
   // print_all_valid_coeffs();
 }
@@ -362,6 +368,48 @@ void free_list_word(struct list_word* list) {
 int get_random_int_in_range(int min, int max) {
   srand(time(0));
   return (rand() % (max - min + 1)) + min;
+}
+
+// TODO : documentation
+int get_index_word_based_on_abc(struct algo_data* algo) {
+  int t_val_tab[algo->candidate_word_list.size];
+  int t_index_tab[algo->candidate_word_list.size];
+  int count_t_val = 0;
+  for (int i = 0; i < algo->candidate_word_list.size; i++) {
+    t_val_tab[i] = 0;
+    t_index_tab[i] = 0;
+  }
+
+  int t_val_last_concept[2];
+  for (int i = 0; i < algo->candidate_word_list.size; i++) {
+    int score = find_score_of_concept_by_word_position_in_algo_list(algo, list_concepts_of_round.list[list_concepts_of_round.size-2], i);
+    int t_ = t(list_concepts_of_round.list[list_concepts_of_round.size-2], algo->candidate_word_list.list[i].v);
+    int u_ = u(list_concepts_of_round.list[list_concepts_of_round.size-2], algo->candidate_word_list.list[i].v);
+    t_val_last_concept[0] = mean_coeffs.a * score + 10*t_*mean_coeffs.b + 10*u_*mean_coeffs.c;
+
+    score = find_score_of_concept_by_word_position_in_algo_list(algo, list_concepts_of_round.list[list_concepts_of_round.size-1], i);
+    t_ = t(list_concepts_of_round.list[list_concepts_of_round.size-1], algo->candidate_word_list.list[i].v);
+    u_ = u(list_concepts_of_round.list[list_concepts_of_round.size-1], algo->candidate_word_list.list[i].v);
+    t_val_last_concept[1] = mean_coeffs.a * score + 10*t_*mean_coeffs.b + 10*u_*mean_coeffs.c;
+
+    if (t_val_last_concept[0] >= t_val_last_concept[1]) {
+      t_val_tab[count_t_val] = t_val_last_concept[1];
+      t_index_tab[count_t_val] = i;
+      count_t_val++;
+    }
+  }
+
+  int best_t_val = 0;
+  int best_t_val_index = 0;
+
+  for (int i = 0; i < count_t_val; i++) {
+    if (t_val_tab[i] > best_t_val) {
+      best_t_val = t_val_tab[i];
+      best_t_val_index = t_index_tab[i];
+    }
+  }
+
+  return best_t_val_index;
 }
 
 /** Count the number of character that can be found from a string in another
@@ -756,18 +804,22 @@ void print_decision() {
 
         int algo_num = 1;
         strongest_algo = &algo1;
-        if (algo2.candidate_word_list.size > 0 && algo2.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
+        if (goddess.size_t_coeff > 0 && list_concepts_of_round.size > 0 && algo2.candidate_word_list.size > 0 && algo2.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
           strongest_algo = &algo2;
           algo_num = 2;
         }
-        if (algo3.candidate_word_list.size > 0 && algo3.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
+        if (goddess.size_t_coeff > 0 && list_concepts_of_round.size > 0 && algo3.candidate_word_list.size > 0 && algo3.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
           strongest_algo = &algo3;
           algo_num = 3;
         }
 
         int index_to_guess;
         if (strongest_algo->candidate_word_list.size > 1) {
-          index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
+          if (goddess.size_t_coeff > 0 && list_concepts_of_round.size > 1) {
+            index_to_guess = get_index_word_based_on_abc(strongest_algo);
+          } else {
+            index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
+          }
         } else {
           index_to_guess = 0;
         }
@@ -781,16 +833,25 @@ void print_decision() {
         fflush(stderr);
         // Retrieve the algo that have the minest size of word possible
         struct algo_data* less_worse_algo;
-        if (algo1.candidate_word_list.size <= algo2.candidate_word_list.size) {
-          less_worse_algo = &algo1;
-        } else {
+        less_worse_algo = &algo1;
+        if (goddess.size_t_coeff > 0 && algo1.candidate_word_list.size > algo2.candidate_word_list.size) {
           less_worse_algo = &algo2;
         }
-        if (algo3.candidate_word_list.size < less_worse_algo->candidate_word_list.size) {
+        if (goddess.size_t_coeff > 0 && algo3.candidate_word_list.size < less_worse_algo->candidate_word_list.size) {
           less_worse_algo = &algo3;
         }
 
-        int index_to_guess = get_random_int_in_range(0, less_worse_algo->candidate_word_list.size-1);
+        int index_to_guess;
+        if (less_worse_algo->candidate_word_list.size > 1) {
+          if (goddess.size_t_coeff > 0) {
+            index_to_guess = get_index_word_based_on_abc(less_worse_algo);
+          } else {
+            index_to_guess = get_random_int_in_range(0, less_worse_algo->candidate_word_list.size-1);
+          }
+        } else {
+          index_to_guess = 0;
+        }
+
         guess_word(less_worse_algo, less_worse_algo->candidate_word_list.list[index_to_guess].v);
       }
     }
@@ -1007,12 +1068,30 @@ void algo2_find_abc() {
   // check coeff to keep
   fprintf(stderr, "Nombre de coeff à garder : %d\n", nb_coeffs_to_keep);
   fflush(stderr);
-  /*
-  for (int i = 0; i < nb_coeffs_to_keep; i++) {
-    fprintf(stderr, "a : %d, b : %d, c : %d\n", new_possible_coeffs[i].a, new_possible_coeffs[i].b, new_possible_coeffs[i].c);
+
+  if (nb_coeffs_to_keep > 0) {
+    /*
+    for (int i = 0; i < nb_coeffs_to_keep; i++) {
+      fprintf(stderr, "a : %d, b : %d, c : %d\n", new_possible_coeffs[i].a, new_possible_coeffs[i].b, new_possible_coeffs[i].c);
+      fflush(stderr);
+    }
+    */
+
+    // mean of all coeffs
+    for (int i = 0; i < nb_coeffs_to_keep; i++) {
+      mean_coeffs.a += new_possible_coeffs[i].a;
+      mean_coeffs.b += new_possible_coeffs[i].b;
+      mean_coeffs.c += new_possible_coeffs[i].c;
+    }
+    mean_coeffs.a /= nb_coeffs_to_keep;
+    mean_coeffs.b /= nb_coeffs_to_keep;
+    mean_coeffs.c /= nb_coeffs_to_keep;
+
+    /*
+    fprintf(stderr, "a_mean : %d, b_mean : %d, c_mean : %d\n", mean_coeffs.a, mean_coeffs.b, mean_coeffs.c);
     fflush(stderr);
+    */
   }
-  */
 }
 
 /** The algorithm 2 which plays with triplets of (a, b, c) to find the secret word.

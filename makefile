@@ -3,10 +3,10 @@ GCC=gcc -Wextra -Wall -std=c99
 all: projet_LN clean
 
 projet_LN: projet_LN.o
-	gcc -c $< -o $@
+	$(GCC) $< -o $@ -lm
 
 %.o: %.c
-	$(GCC) $< -o $@
+	gcc -c $< -o $@
 
 clean:
 	rm *.o

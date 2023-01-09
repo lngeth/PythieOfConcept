@@ -7,14 +7,19 @@
  *   - Utilise connaissance de 'p' pour trouver plus facilement le mot secret.
  *   - Possède à coup sûr, dans sa liste de mot candidat, le mot secret de la déesse.
  *   - Au début, on ne connait pas p, on regarde donc les 7 premiers et 17 derniers scores.
- *     --> L'algo sera plus efficace quand le paramètre 'p' est trouvé, c'est à dire après avoir trouvé le mot secret du round.
+ *     --> L'algo sera plus efficace quand le paramètre 'p' est trouvé.
  *     --> Si pas mot secret pas trouvé au 1er round, la recherche de p continue au round suivant et ainsi de suite.
+ *     --> On réduit les bornes de possibilité de p compris entre [3, 7]
  *
  *   !Logique GLOBALE en Pseudo-code!
  *   - Récupération du dernier concept donnée par la déesse c_last
  *   - Pour chaque mot, mot_i, restant de la liste de mot candidat :
  *       - Si le concept c_last fait partie du range des '10 - p' moins scorés ou '10 + p' plus scorés concept de mot_i :
- *         --> On garde le mot.
+ *         - Si pour chaque concept restant dans la liste des concepts restants possibles, il existe un concept avec le même couple (t, u), et que ce concept a
+ *           un score plus élevé que le dernier concept :
+ *             --> On enlève le mot
+ *         - Si même score, on regarde l'ordre alphabétique...
+ *         - Sinon, on garde le mot.
  *       - Sinon, on ne le garde pas.
  *
  *
@@ -165,7 +170,6 @@ void free_list_word(struct list_word*);
 
 /* Math/calculation */
 int get_random_int_in_range(int, int);
-int get_index_word_based_on_abc(struct algo_data*);
 int t(char*, char*);
 int u(char*, char*);
 
@@ -219,7 +223,6 @@ static struct goddess_param goddess;
 static struct game_config game;
 static int possible_coeff[NB_COEFF] = { 5, 35, 65, 95 };
 static char secret_word_save[MAX_SIZE_WORD];
-static struct coeffs mean_coeffs;
 
 
 /** All functions **/
@@ -287,11 +290,6 @@ void init_global_variables() {
     }
   }
   goddess.size_t_coeff = new_size_t_coeff;
-
-  mean_coeffs.a = 0;
-  mean_coeffs.b = 0;
-  mean_coeffs.c = 0;
-
   // print_all_valid_coeffs();
 }
 
@@ -368,50 +366,6 @@ void free_list_word(struct list_word* list) {
 int get_random_int_in_range(int min, int max) {
   srand(time(0));
   return (rand() % (max - min + 1)) + min;
-}
-
-/** Return the index of the word that has the maximum t_value, condition that its t_value is lower than the t_value of the last concept gave by the goddess
- * \param algo the algo to retrieve word index
- */
-int get_index_word_based_on_abc(struct algo_data* algo) {
-  int t_val_tab[algo->candidate_word_list.size];
-  int t_index_tab[algo->candidate_word_list.size];
-  int count_t_val = 0;
-  for (int i = 0; i < algo->candidate_word_list.size; i++) {
-    t_val_tab[i] = 0;
-    t_index_tab[i] = 0;
-  }
-
-  int t_val_last_concept[2];
-  for (int i = 0; i < algo->candidate_word_list.size; i++) {
-    int score = find_score_of_concept_by_word_position_in_algo_list(algo, list_concepts_of_round.list[list_concepts_of_round.size-2], i);
-    int t_ = t(algo->candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size-2]);
-    int u_ = u(algo->candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size-2]);
-    t_val_last_concept[0] = mean_coeffs.a * score + 10*t_*mean_coeffs.b + 10*u_*mean_coeffs.c;
-
-    score = find_score_of_concept_by_word_position_in_algo_list(algo, list_concepts_of_round.list[list_concepts_of_round.size-1], i);
-    t_ = t(algo->candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size-1]);
-    u_ = u(algo->candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size-1]);
-    t_val_last_concept[1] = mean_coeffs.a * score + 10*t_*mean_coeffs.b + 10*u_*mean_coeffs.c;
-
-    if (t_val_last_concept[0] >= t_val_last_concept[1]) {
-      t_val_tab[count_t_val] = t_val_last_concept[1];
-      t_index_tab[count_t_val] = i;
-      count_t_val++;
-    }
-  }
-
-  int best_t_val = 0;
-  int best_t_val_index = 0;
-
-  for (int i = 0; i < count_t_val; i++) {
-    if (t_val_tab[i] > best_t_val) {
-      best_t_val = t_val_tab[i];
-      best_t_val_index = t_index_tab[i];
-    }
-  }
-
-  return best_t_val_index;
 }
 
 /** Count the number of character that can be found from a string in another
@@ -1073,30 +1027,6 @@ void algo2_find_abc() {
   // check coeff to keep
   fprintf(stderr, "Nombre de coeff à garder : %d\n", nb_coeffs_to_keep);
   fflush(stderr);
-
-  if (nb_coeffs_to_keep > 0) {
-    /*
-    for (int i = 0; i < nb_coeffs_to_keep; i++) {
-      fprintf(stderr, "a : %d, b : %d, c : %d\n", new_possible_coeffs[i].a, new_possible_coeffs[i].b, new_possible_coeffs[i].c);
-      fflush(stderr);
-    }
-    */
-
-    // mean of all coeffs
-    for (int i = 0; i < nb_coeffs_to_keep; i++) {
-      mean_coeffs.a += new_possible_coeffs[i].a;
-      mean_coeffs.b += new_possible_coeffs[i].b;
-      mean_coeffs.c += new_possible_coeffs[i].c;
-    }
-    mean_coeffs.a /= nb_coeffs_to_keep;
-    mean_coeffs.b /= nb_coeffs_to_keep;
-    mean_coeffs.c /= nb_coeffs_to_keep;
-
-    /*
-    fprintf(stderr, "a_mean : %d, b_mean : %d, c_mean : %d\n", mean_coeffs.a, mean_coeffs.b, mean_coeffs.c);
-    fflush(stderr);
-    */
-  }
 }
 
 /** The algorithm 2 which plays with triplets of (a, b, c) to find the secret word.
@@ -1336,8 +1266,6 @@ int main() {
         if (game.state.is_me_founded == 0) {
           all_algo();
         }
-        if (goddess.p.founded == 0 && algo1.candidate_word_list.size == 1)
-          find_p(0, list_concepts_of_round.size-1, find_word_index_in_sorted_list(algo1.candidate_word_list.list[0].v));
 
         print_decision();
         get_turn_infos();
@@ -1345,10 +1273,10 @@ int main() {
       game.state.turn++;
     }
 
-    if (goddess.secret_words_index[*round] != -1) { // we found the secret round at that round
+    if (goddess.secret_words_index[*round] != -1) { // we found the secret round of that round
       if (goddess.p.founded == 0)
         find_p(0, list_concepts_of_round.size-1, goddess.secret_words_index[*round]);
-      if (*round == 0 || (goddess.size_t_coeff == 0 && list_concepts_of_round.size > 2)) {
+      if (goddess.size_t_coeff == 0 && list_concepts_of_round.size > 2) {
         algo2_find_abc();
       }
     }

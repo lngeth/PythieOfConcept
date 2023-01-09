@@ -769,11 +769,13 @@ void guess_word(struct algo_data* algo, char* word) {
  */
 void print_decision() {
   if (game.state.round == 0 || goddess.p.founded == 0) {
-    if (list_concepts_of_round.size < NB_TURN) {
-      if (goddess.p.founded == 1 && algo1.candidate_word_list.size == 1 && game.state.is_me_founded == 0) {
+    if (list_concepts_of_round.size <= NB_TURN) {
+      // if (goddess.p.founded == 1 && algo1.candidate_word_list.size == 1 && game.state.is_me_founded == 0) {
+      if (algo1.candidate_word_list.size > 0 && game.state.is_me_founded == 0) {
         fprintf(stderr, "1 \n");
         fflush(stderr);
-        guess_word(&algo1, algo1.candidate_word_list.list[0].v);
+        int index_to_guess = get_random_int_in_range(0, algo1.candidate_word_list.size-1);
+        guess_word(&algo1, algo1.candidate_word_list.list[index_to_guess].v);
       } else {
         fprintf(stderr, "2 \n");
         fflush(stderr);
@@ -879,8 +881,6 @@ void print_decision() {
  * \param index_sw the secret word's index in initial_sorted_word_list of the actual round
  */
 void find_p(int start_index, int end_index, int index_sw) { // TODO : A optimiser
-  // goddess.secret_words_index[game.state.round];
-
   for (int i = start_index; i < end_index+1; i++) {
     for (int j = 0; j < NB_CONCEPT; j++) {
       if (strcmp(list_concepts_of_round.list[i], initial_sorted_word_list.list[index_sw].concepts[j]) == 0) {
@@ -1330,7 +1330,7 @@ void all_algo() {
   t = clock();
 
   ia_algo1();
-  if (game.state.round != 0 && goddess.size_t_coeff > 0 && list_concepts_of_round.size > 1 && algo2.candidate_word_list.size > 0 && goddess.p.founded == 1) {
+  if (game.state.round != 0 && goddess.size_t_coeff > 0 && list_concepts_of_round.size > 1 && algo2.candidate_word_list.size > 0) {
     if (list_concepts_of_round.size == 2) { // copy candidate_word_list of algo1 in algo2 & algo3
       for (int i = 0; i < NB_WORD; i++) { // do both copy in same loop is more effective than using a function to copy individually
         strcpy(algo2.candidate_word_list.list[i].v, algo1.candidate_word_list.list[i].v);
@@ -1406,7 +1406,7 @@ int main() {
 
     if (goddess.secret_words_index[*round] != -1) { // we found the secret round at that round
       if (goddess.p.founded == 0)
-        find_p(0, NB_CONCEPT-1, goddess.secret_words_index[*round]);
+        find_p(0, list_concepts_of_round.size-1, goddess.secret_words_index[*round]);
       if (*round == 0 || (goddess.size_t_coeff == 0 && list_concepts_of_round.size > 2)) {
         algo2_find_abc();
       }

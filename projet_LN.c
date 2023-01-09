@@ -960,7 +960,7 @@ void ia_algo1() {
 
     // Check if the rest of possible 20 concepts of the word that have same t() & u() with last concept gave by goddess has lower score, if not remove word
     int remove_word = 0;
-    if (goddess.p.founded == 1 && list_concepts_of_round.size > 1 && is_concept_present == 1) {
+    if (list_concepts_of_round.size > 1 && is_concept_present == 1) {
       int t_[2];
       int u_[2];
       int s_[2];
@@ -968,6 +968,19 @@ void ia_algo1() {
       u_[0] = u(algo1.candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size - 1]);
       s_[0] = find_score_of_concept_by_word_position_in_algo_list(&algo1, list_concepts_of_round.list[list_concepts_of_round.size - 1], i);
       for (int j = 0; j < count_list; j++) {
+        if (goddess.p.founded == 0) { // if p is not founded yet, we consider that each word has at least 3 lowest score concept & 13 highest score concept for SURE
+          int ignore_index = 0;
+          for (int k = 3; k < 11; k++) {
+            if (j == k) {
+              ignore_index = 1;
+              break;
+            }
+          }
+          if (ignore_index == 1) {
+            continue;
+          }
+        }
+
         int is_concept_already_gave = 0;
         for (int k = 0; k < list_concepts_of_round.size; k++) {
           if (strcmp(list_20_concept_of_word_i[j], list_concepts_of_round.list[k]) == 0) {

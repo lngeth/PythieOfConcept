@@ -385,13 +385,13 @@ int get_index_word_based_on_abc(struct algo_data* algo) {
   int t_val_last_concept[2];
   for (int i = 0; i < algo->candidate_word_list.size; i++) {
     int score = find_score_of_concept_by_word_position_in_algo_list(algo, list_concepts_of_round.list[list_concepts_of_round.size-2], i);
-    int t_ = t(list_concepts_of_round.list[list_concepts_of_round.size-2], algo->candidate_word_list.list[i].v);
-    int u_ = u(list_concepts_of_round.list[list_concepts_of_round.size-2], algo->candidate_word_list.list[i].v);
+    int t_ = t(algo->candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size-2]);
+    int u_ = u(algo->candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size-2]);
     t_val_last_concept[0] = mean_coeffs.a * score + 10*t_*mean_coeffs.b + 10*u_*mean_coeffs.c;
 
     score = find_score_of_concept_by_word_position_in_algo_list(algo, list_concepts_of_round.list[list_concepts_of_round.size-1], i);
-    t_ = t(list_concepts_of_round.list[list_concepts_of_round.size-1], algo->candidate_word_list.list[i].v);
-    u_ = u(list_concepts_of_round.list[list_concepts_of_round.size-1], algo->candidate_word_list.list[i].v);
+    t_ = t(algo->candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size-1]);
+    u_ = u(algo->candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size-1]);
     t_val_last_concept[1] = mean_coeffs.a * score + 10*t_*mean_coeffs.b + 10*u_*mean_coeffs.c;
 
     if (t_val_last_concept[0] >= t_val_last_concept[1]) {
@@ -415,16 +415,18 @@ int get_index_word_based_on_abc(struct algo_data* algo) {
 }
 
 /** Count the number of character that can be found from a string in another
- * \param m the first string
- * \param w the second string
+ * \param sw the first string
+ * \param c the second string
  * \return count of same character from both string
  */
-int t(char* m, char* w) {
+int t(char* sw, char* c) {
   int count = 0;
-  for (int i = 0; i < (int) strlen(m); i++) {
-    for (int j = 0; j < (int) strlen(w); j++) {
-      if (m[i] == w[j] && m[i] != '\0')
+  for (int i = 0; i < (int) strlen(sw); i++) {
+    for (int j = 0; j < (int) strlen(c); j++) {
+      if (sw[i] == c[j] && sw[i] != '\0') {
         count++;
+        break;
+      }
     }
   }
   return count;
@@ -818,7 +820,8 @@ void print_decision() {
         int index_to_guess;
         if (strongest_algo->candidate_word_list.size > 1) {
           if (goddess.size_t_coeff > 0 && list_concepts_of_round.size > 1) {
-            index_to_guess = get_index_word_based_on_abc(strongest_algo);
+            // index_to_guess = get_index_word_based_on_abc(strongest_algo);
+            index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
           } else {
             index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
           }
@@ -846,7 +849,8 @@ void print_decision() {
         int index_to_guess;
         if (less_worse_algo->candidate_word_list.size > 1) {
           if (goddess.size_t_coeff > 0) {
-            index_to_guess = get_index_word_based_on_abc(less_worse_algo);
+            // index_to_guess = get_index_word_based_on_abc(less_worse_algo);
+            index_to_guess = get_random_int_in_range(0, less_worse_algo->candidate_word_list.size-1);
           } else {
             index_to_guess = get_random_int_in_range(0, less_worse_algo->candidate_word_list.size-1);
           }
@@ -929,25 +933,70 @@ void ia_algo1() {
   init_new_list_word(&new_candidat_list, algo1_list_size);
 
   for (int i = 0; i < algo1.candidate_word_list.size; i++) {
-    int partie_basse = 0;
+    // Copy all the (10 - p) and (10 + p) concepts into temporary char* list
+    char list_20_concept_of_word_i[(10 - goddess.p.lower) + (10 + goddess.p.upper)][MAX_SIZE_CONCEPT];
+    int list_20_score_of_word_i[(10 - goddess.p.lower) + (10 + goddess.p.upper)];
+    int count_list = 0;
     for (int j = 0; j < 10-goddess.p.lower; j++) {
-      if (strcmp(list_concepts_of_round.list[list_concepts_of_round.size-1], algo1.candidate_word_list.list[i].concepts[j]) == 0) {
-        partie_basse = 1;
+      strcpy(list_20_concept_of_word_i[count_list], algo1.candidate_word_list.list[i].concepts[j]);
+      list_20_score_of_word_i[count_list] = algo1.candidate_word_list.list[i].scores[j];
+      count_list++;
+    }
+
+    for (int j = NB_CONCEPT - (10 + goddess.p.upper); j < NB_CONCEPT; j++) {
+      strcpy(list_20_concept_of_word_i[count_list], algo1.candidate_word_list.list[i].concepts[j]);
+      list_20_score_of_word_i[count_list] = algo1.candidate_word_list.list[i].scores[j];
+      count_list++;
+    }
+
+    // Check if the word contains the last concept gave by goddess
+    int is_concept_present = 0;
+    for (int j = 0; j < count_list; j++) {
+      if (strcmp(list_concepts_of_round.list[list_concepts_of_round.size-1], list_20_concept_of_word_i[j]) == 0) {
+        is_concept_present = 1;
         break;
       }
     }
 
-    int partie_haute = 0;
-    if (partie_basse == 0) {
-      for (int j = NB_CONCEPT - (10 + goddess.p.upper); j < NB_CONCEPT; j++) {
-        if (strcmp(list_concepts_of_round.list[list_concepts_of_round.size-1], algo1.candidate_word_list.list[i].concepts[j]) == 0) {
-          partie_haute = 1;
-          break;
+    // Check if the rest of possible 20 concepts of the word that have same t() & u() with last concept gave by goddess has lower score, if not remove word
+    int remove_word = 0;
+    if (goddess.p.founded == 1 && list_concepts_of_round.size > 1 && is_concept_present == 1) {
+      int t_[2];
+      int u_[2];
+      int s_[2];
+      t_[0] = t(algo1.candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size - 1]);
+      u_[0] = u(algo1.candidate_word_list.list[i].v, list_concepts_of_round.list[list_concepts_of_round.size - 1]);
+      s_[0] = find_score_of_concept_by_word_position_in_algo_list(&algo1, list_concepts_of_round.list[list_concepts_of_round.size - 1], i);
+      for (int j = 0; j < count_list; j++) {
+        int is_concept_already_gave = 0;
+        for (int k = 0; k < list_concepts_of_round.size; k++) {
+          if (strcmp(list_20_concept_of_word_i[j], list_concepts_of_round.list[k]) == 0) {
+            is_concept_already_gave = 1;
+            break;
+          }
+        }
+
+        if (is_concept_already_gave == 0) {
+          t_[1] = t(algo1.candidate_word_list.list[i].v, list_20_concept_of_word_i[j]);
+          u_[1] = u(algo1.candidate_word_list.list[i].v, list_20_concept_of_word_i[j]);
+          s_[1] = list_20_score_of_word_i[j];
+
+          if (t_[0] == t_[1] && u_[0] == u_[1]) {
+            if (s_[1] > s_[0]) {
+              remove_word = 1;
+            }
+            // If have the same score, they have same t_val --> ordered alphabetically
+            else if (s_[1] == s_[0] && strcmp(list_concepts_of_round.list[list_concepts_of_round.size - 1], list_20_concept_of_word_i[j]) == 1) {
+              remove_word = 1;
+            }
+          }
         }
       }
+    } else if (is_concept_present == 0) {
+      remove_word = 1;
     }
 
-    if (partie_basse == 1 || partie_haute == 1) {
+    if (remove_word == 0) {
       int new_size = new_candidat_list.size;
       strcpy(new_candidat_list.list[new_size].v, algo1.candidate_word_list.list[i].v);
       for (int j = 0; j < NB_CONCEPT; j++) {
@@ -1001,8 +1050,8 @@ void algo2_find_abc() {
   int stu[3][3];// 's' score, 't' value and 'u' value
   for (int j = 0; j < 3; j++) {
     stu[j][0] = find_score_concept_with_word_position(top_3_concept[j], goddess.secret_words_index[game.state.round]); // 2nd param is secret word's index of considered round
-    stu[j][1] = t(top_3_concept[j], initial_sorted_word_list.list[goddess.secret_words_index[game.state.round]].v);
-    stu[j][2] = u(top_3_concept[j], initial_sorted_word_list.list[goddess.secret_words_index[game.state.round]].v);
+    stu[j][1] = t(initial_sorted_word_list.list[goddess.secret_words_index[game.state.round]].v, top_3_concept[j]);
+    stu[j][2] = u(initial_sorted_word_list.list[goddess.secret_words_index[game.state.round]].v, top_3_concept[j]);
   }
 
   int t_val_top_3_concept[3];
@@ -1123,7 +1172,7 @@ void ia_algo2() {
 
       for (int k = 0; k < 2; k++) {
         score_last_2_concept[k] = find_score_of_concept_by_word_position_in_algo_list(&algo2, last_two_concept[k], i);
-        t_val_last_2_concept[k] = goddess.t_coeff[j].a * score_last_2_concept[k] + 10 * goddess.t_coeff[j].b * t(last_two_concept[k], algo2.candidate_word_list.list[i].v) + 10 * goddess.t_coeff[j].c * u(last_two_concept[k], algo2.candidate_word_list.list[i].v);
+        t_val_last_2_concept[k] = goddess.t_coeff[j].a * score_last_2_concept[k] + 10 * goddess.t_coeff[j].b * t(algo2.candidate_word_list.list[i].v, last_two_concept[k]) + 10 * goddess.t_coeff[j].c * u(last_two_concept[k], algo2.candidate_word_list.list[i].v);
       }
 
       if (t_val_last_2_concept[0] > t_val_last_2_concept[1]) {

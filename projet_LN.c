@@ -768,101 +768,42 @@ void guess_word(struct algo_data* algo, char* word) {
 /** Algorithm that decide either it prints pass or a word
  */
 void print_decision() {
-  if (game.state.round == 0 || goddess.p.founded == 0) {
-    if (list_concepts_of_round.size <= NB_TURN) {
-      // if (goddess.p.founded == 1 && algo1.candidate_word_list.size == 1 && game.state.is_me_founded == 0) {
-      if (algo1.candidate_word_list.size > 0 && game.state.is_me_founded == 0) {
-        fprintf(stderr, "1 \n");
-        fflush(stderr);
-        int index_to_guess = get_random_int_in_range(0, algo1.candidate_word_list.size-1);
-        guess_word(&algo1, algo1.candidate_word_list.list[index_to_guess].v);
-      } else {
-        fprintf(stderr, "2 \n");
-        fflush(stderr);
-        print_pass();
+  int do_pass = 0;
+  struct algo_data* smartest_algo;
+  int index_to_guess = -1;
+  int algo_num = 0;
+
+  if (game.state.is_me_founded == 1) {
+    do_pass = 1;
+  } else { // secret word not found yet, must guess something
+    smartest_algo = &algo1;
+    algo_num = 1;
+
+    if (goddess.size_t_coeff > 0) { // algo 2 & 3 might be enable
+      if (algo2.candidate_word_list.size > 0 && algo1.candidate_word_list.size > algo2.candidate_word_list.size) {
+        smartest_algo = &algo2;
+        algo_num = 2;
       }
-    } else {
-      if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
-        if (algo1.candidate_word_list.size > 0) {
-          fprintf(stderr, "3.1 \n");
-          fflush(stderr);
-          int index_to_guess = get_random_int_in_range(0, algo1.candidate_word_list.size-1);
-          guess_word(&algo1, algo1.candidate_word_list.list[index_to_guess].v);
-        } else { // in case all concepts erased every possible word
-          fprintf(stderr, "3.2 \n");
-          fflush(stderr);
-          guess_word(&algo1, secret_word_save);
-        }
-      } else if (game.state.is_me_founded == 1 && game.state.round % 21 == 0) {
-        print_pass();
+      if (algo3.candidate_word_list.size > 0 && smartest_algo->candidate_word_list.size > algo3.candidate_word_list.size) {
+        smartest_algo = &algo3;
+        algo_num = 3;
       }
     }
+
+    if (smartest_algo->candidate_word_list.size == 1) {
+      index_to_guess = 0;
+    } else {
+      index_to_guess = get_random_int_in_range(0, smartest_algo->candidate_word_list.size-1);
+    }
+  }
+
+  // PASS or GUESS
+  if (do_pass == 1) {
+    print_pass();
   } else {
-    if (list_concepts_of_round.size <= NB_TURN) {
-      if (game.state.is_me_founded == 1) {
-        fprintf(stderr, "4 \n");
-        fflush(stderr);
-        print_pass();
-      } else {
-        fprintf(stderr, "5 \n");
-        fflush(stderr);
-        struct algo_data* strongest_algo;
-
-        int algo_num = 1;
-        strongest_algo = &algo1;
-        if (goddess.size_t_coeff > 0 && list_concepts_of_round.size > 0 && algo2.candidate_word_list.size > 0 && algo2.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
-          strongest_algo = &algo2;
-          algo_num = 2;
-        }
-        if (goddess.size_t_coeff > 0 && list_concepts_of_round.size > 0 && algo3.candidate_word_list.size > 0 && algo3.candidate_word_list.size < strongest_algo->candidate_word_list.size) {
-          strongest_algo = &algo3;
-          algo_num = 3;
-        }
-
-        int index_to_guess;
-        if (strongest_algo->candidate_word_list.size > 1) {
-          if (goddess.size_t_coeff > 0 && list_concepts_of_round.size > 1) {
-            // index_to_guess = get_index_word_based_on_abc(strongest_algo);
-            index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
-          } else {
-            index_to_guess = get_random_int_in_range(0, strongest_algo->candidate_word_list.size-1);
-          }
-        } else {
-          index_to_guess = 0;
-        }
-        fprintf(stderr, "De algo num %d\n", algo_num);
-        fflush(stderr);
-        guess_word(strongest_algo, strongest_algo->candidate_word_list.list[index_to_guess].v);
-      }
-    } else {
-      if (game.state.is_me_founded == 0) { // can't pass anymore, must try something even if not sure
-        fprintf(stderr, "6 \n");
-        fflush(stderr);
-        // Retrieve the algo that have the minest size of word possible
-        struct algo_data* less_worse_algo;
-        less_worse_algo = &algo1;
-        if (goddess.size_t_coeff > 0 && algo1.candidate_word_list.size > algo2.candidate_word_list.size) {
-          less_worse_algo = &algo2;
-        }
-        if (goddess.size_t_coeff > 0 && algo3.candidate_word_list.size < less_worse_algo->candidate_word_list.size) {
-          less_worse_algo = &algo3;
-        }
-
-        int index_to_guess;
-        if (less_worse_algo->candidate_word_list.size > 1) {
-          if (goddess.size_t_coeff > 0) {
-            // index_to_guess = get_index_word_based_on_abc(less_worse_algo);
-            index_to_guess = get_random_int_in_range(0, less_worse_algo->candidate_word_list.size-1);
-          } else {
-            index_to_guess = get_random_int_in_range(0, less_worse_algo->candidate_word_list.size-1);
-          }
-        } else {
-          index_to_guess = 0;
-        }
-
-        guess_word(less_worse_algo, less_worse_algo->candidate_word_list.list[index_to_guess].v);
-      }
-    }
+    fprintf(stderr, "De algo n°%d\n", algo_num);
+    fflush(stderr);
+    guess_word(smartest_algo, smartest_algo->candidate_word_list.list[index_to_guess].v);
   }
 }
 

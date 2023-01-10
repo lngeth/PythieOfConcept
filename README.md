@@ -1,6 +1,4 @@
 # Reste à faire
 
-- remove_unused_variables : Enlever les variables non nécessaires (*)
-- globalize_varibles : Mettre les variables nécessaires en globales, c'est à dire ceux pour utilisé par les fonctions
-- free_malloc : Libérer les mallocs
-- ... à définir
+- (algo 1) créer une variable qui store les derniers mots et utilisent cette liste uniquement si le concept réduit à 0 la liste de algo1  
+- gérer les cas où return -1

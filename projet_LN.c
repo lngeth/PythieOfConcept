@@ -865,7 +865,7 @@ void ia_algo1() {
       for (int j = 0; j < count_list; j++) {
         if (goddess.p.founded == 0) { // if p is not founded yet, we consider that each word has at least 3 lowest score concept & 13 highest score concept for SURE
           int ignore_index = 0;
-          for (int k = 3; k < 11; k++) {
+          for (int k = (10 - goddess.p.upper); k < count_list - (10 + goddess.p.lower); k++) {
             if (j == k) {
               ignore_index = 1;
               break;

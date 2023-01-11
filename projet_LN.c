@@ -320,7 +320,7 @@ int find_score_concept_with_word_position(char* concept, int w_pos) {
       return initial_sorted_word_list.list[w_pos].scores[i];
     }
   }
-  return -1; // TODO : tester l'erreur
+  return -1;
 }
 
 /** Get the score of an concept associated with the word at position i, in the wanted algo's candidate list
@@ -495,19 +495,19 @@ void get_round_infos() {
   }
 }
 
-/** Scan from stdin all players informations : can be (J P END) or (W J ST)
+/** Scan from stdin all players informations W J ST
  */
 void get_turn_infos() {
   char line[MAX_SIZE_WORD];
   for (int nb_player = 0; nb_player < game.NJ; nb_player++) {
     scanf(" %[^\n]s\n", line);
 
-    char first_string[MAX_SIZE_WORD]; // W or J ?
-    int sec_info; // P or J ?
-    int third_info; // END or ST ?
+    char first_string[MAX_SIZE_WORD];
+    int sec_info;
+    int third_info;
     sscanf(line, "%s %d %d", (char *) &first_string, &sec_info, &third_info);
 
-    if (third_info == 2) {
+    if (third_info == 2) { // I found the word
       if (game.state.is_me_founded == 0) {
         game.state.is_me_founded = 1;
       }
@@ -517,23 +517,12 @@ void get_turn_infos() {
         char* word_to_save;
         if (algo1.candidate_word_list.size > 0) {
           word_to_save = algo1.last_word_proposed;
-        } else {
+        } else { // in case algo1 remove every word (already happened)
           word_to_save = secret_word_save;
         }
         goddess.secret_words_index[game.state.round] = find_word_index_in_sorted_list(word_to_save);
       }
-
-      fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
-      fflush(stderr);
-    } else if (game.state.is_me_founded == 1 && third_info == 1) { // new round with (J, P, END)
-      int player_i = atoi(first_string);
-      game.players[player_i].score = sec_info;
-      game.players[player_i].ST = third_info;
-      game.state.is_all_founded = 1;
-
-      fprintf(stderr, "J: %d , P: %d , END: %d\n", player_i, sec_info, third_info);
-      fflush(stderr);
-    } else { // (W J ST)
+    } else { // didn't found the word
       game.players[sec_info].ST = third_info;
 
       // Remove a wrong word proposed by someone (can be me) in all algos
@@ -541,14 +530,13 @@ void get_turn_infos() {
         remove_word_from_algos_word_list(&algo1, first_string);
         remove_word_from_algos_word_list(&algo2, first_string);
         remove_word_from_algos_word_list(&algo3, first_string);
-        memset(algo1.last_word_proposed, 0, MAX_SIZE_WORD); // TODO : Créer une fonction qui clean
+        memset(algo1.last_word_proposed, 0, MAX_SIZE_WORD);
         memset(algo2.last_word_proposed, 0, MAX_SIZE_WORD);
         memset(algo3.last_word_proposed, 0, MAX_SIZE_WORD);
       }
-
-      fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
-      fflush(stderr);
     }
+    fprintf(stderr, "W: %s , J: %d , ST: %d\n", first_string, sec_info, third_info);
+    fflush(stderr);
   }
 
   if (algo3.candidate_word_list.size == 0 && algo2.candidate_word_list.size != 0) { // algo3 went wrong, we must stop algo2 if it's still running
@@ -678,7 +666,7 @@ void print_decision() {
  * \param end_index the index of the upper bound range
  * \param index_sw the secret word's index in initial_sorted_word_list of the actual round
  */
-void find_p(int start_index, int end_index, int index_sw) { // TODO : A optimiser
+void find_p(int start_index, int end_index, int index_sw) {
   for (int i = start_index; i < end_index+1; i++) {
     for (int j = 0; j < NB_CONCEPT; j++) {
       if (strcmp(list_concepts_of_round.list[i], initial_sorted_word_list.list[index_sw].concepts[j]) == 0) {
@@ -815,8 +803,6 @@ void ia_algo1() {
 
   copy_list_word_to_another(&(algo1.candidate_word_list), &new_candidat_list);
 
-
-
   fprintf(stderr, "1 %d\n", algo1.candidate_word_list.size);
   fflush(stderr);
 
@@ -827,7 +813,6 @@ void ia_algo1() {
 /** First part of algo 2 that list all the triplets (a, b, c) that order the first 3 concepts gave by the Goddess, correctly.
  */
 void algo2_find_abc() {
-  // TODO : Créer une fonction qui réinitialise les coeffs à l'initiale
   if (goddess.size_t_coeff == 0) { // reset all posssible coeffs (a, b, c)
     int new_size_t_coeff = 0;
     for (int a = 0; a < NB_COEFF; a++) {
@@ -872,7 +857,7 @@ void algo2_find_abc() {
     }
 
     // sort 3 top concept by t_val
-    for (int j = 3 - 1; j > 0; j--) { // bubble sort // TODO : OPTIMIZE
+    for (int j = 3 - 1; j > 0; j--) { // bubble sort
       for (int k = 0; k < 3 -1; k++) {
         if (t_val_top_3_concept[k+1] > t_val_top_3_concept[k]) { // value order
           int tmp = t_val_top_3_concept[k+1];
@@ -937,8 +922,6 @@ void ia_algo2() {
 
   for (int i = 0; i < algo2_list_size; i++) {
     int remove_word = 1;
-    fprintf(stderr, "je suis la\n");
-    fflush(stderr);
 
     for (int j = 0; j < goddess.size_t_coeff; j++) {
       int t_val_last_2_concept[2];
@@ -952,7 +935,7 @@ void ia_algo2() {
       if (t_val_last_2_concept[0] > t_val_last_2_concept[1]) {
         remove_word = 0;
         break;
-      } else if (t_val_last_2_concept[0] == t_val_last_2_concept[1]) { // TODO : vérifier avec cette condition
+      } else if (t_val_last_2_concept[0] == t_val_last_2_concept[1]) {
         if (strcmp(last_two_concept[0], last_two_concept[1]) == -1) { // if the 2 concepts have the same t_val, the first concept must be first alphabetically
           remove_word = 0;
           break;

@@ -10,9 +10,12 @@
  *     --> L'algo sera plus efficace quand le paramètre 'p' est trouvé.
  *     --> Si pas mot secret pas trouvé au 1er round, la recherche de p continue au round suivant et ainsi de suite.
  *     --> On réduit les bornes de possibilité de p compris entre [3, 7]
+ *   - Comparaison des valeurs (t, u) pour retirer un mot
+ *   - Complexité linéaire (détail dans la doc ia_algo1())
  *
  *   !Logique GLOBALE en Pseudo-code!
  *   - Récupération du dernier concept donnée par la déesse c_last
+ *   - Calcule des valeurs (t, u) de c_last
  *   - Pour chaque mot, mot_i, restant de la liste de mot candidat :
  *       - Si le concept c_last fait partie du range des '10 - p' moins scorés ou '10 + p' plus scorés concept de mot_i :
  *         - Si pour chaque concept restant dans la liste des concepts restants possibles, il existe un concept avec le même couple (t, u), et que ce concept a
@@ -21,6 +24,11 @@
  *         - Si même score, on regarde l'ordre alphabétique...
  *         - Sinon, on garde le mot.
  *       - Sinon, on ne le garde pas.
+ *      - Si on garde le mot :
+ *        - Calcule ensuite pour chaque concept NON donné par la déesse les valeurs (t, u)
+ *        - Si (t, u) de c_last est EGALE à (t, u) d'un concept restant :
+ *          - Son score doit forcément être inférieur à celui du dernier concept donné par la déesse, si c'est pas le cas :
+ *            --> On ne garde pas le mot
  *
  *
  * -- Fonctionnement Algo 2 :
@@ -32,6 +40,7 @@
  *       - listage à la fin de chaque round si on pas déjà lister le coefficient et qu'on a trouvé le mot secret.
  *     2- Utilisation des coefficients valides pour supprimer des mots.
  *       - Se lance quand on une liste de coeff > 0 et que la déesse a donné au moins 2 concepts (à partir tour 2).
+ *   - Complexité linéaire (détail dans la doc ia_algo2())
  *
  *   !Logique GLOBALE en Pseudo-code!
  *     Etape 1 : Lister les coefficients possibles
@@ -68,6 +77,7 @@
  *   - Il fait l'intersection entre les mots candidats de l'algo 1 et 2, puis avec sa propre liste (sauvegarde de l'intersection des listes au tour précédent).
  *   --> Exécuté uniquement si algo2 éxécuté (quand liste algo2 > 0).
  *   --> Peut ne pas avoir le mot secret dans sa liste.
+ *   - Complexité linéaire (détail dans la doc ia_algo3())
  *
  *   !Logique GLOBALE en Pseudo-code!
  *   - Si liste_algo1 > 0 && liste_algo2 > 0:
@@ -706,10 +716,16 @@ void find_p(int start_index, int end_index, int index_sw) {
 }
 
 /** The algorithm 1 which plays with the p parameter to find the secret word.
-*/
+ * global complexity in worst case : if n remaining words from last turn & only remove 1 word & p not founded & no concept that have same t and u calculation
+ * n : for n words of last turn that are kept
+ *  + 24 : copy all the (10 - p) and (10 + p) concepts into temporary variable
+ *  + 24 : comparison of concept with the one gave by goddess (worst case)
+ *  + (50 * 2 + 1) : copy n remaining words in which 50 concepts & scores + word's value in temporary variable
+ *  + (50 * 2 + 1) : copy back remaining word in the algo's list of word for next round
+ * = n * (2 * 24 + 2 * (50 * 2 + 1)) = n * (250 op.)
+ * ==> Linear complexity
+ */
 void ia_algo1() {
-  int algo1_list_size = algo1.candidate_word_list.size;
-
   struct list_word new_candidat_list;
   new_candidat_list.size = 0;
 
@@ -909,7 +925,15 @@ void algo2_find_abc() {
 }
 
 /** The algorithm 2 which plays with triplets of (a, b, c) to find the secret word.
-*/
+ * global complexity in worst case : if there is & n words from last turn & remove 1 word & 64 valid triplets (a, b, c)
+ * n : word remained by last turn
+ *  + 64 : valid coeffs
+ *    + 2 * (1000 + 50 + 3) : find word score (last position & last concept) & calculate t_val
+ *  + (50 * 2 + 1) : copy 50 concepts, 50 scores & value of word in temporary variable
+ *  + (50 * 2 + 1) : copy back to algo2 list of word : 50 concepts, 50 scores & value
+ * = n * ( 64 * (2 * (1000 + 50 + 3)) + 2 * (50 * 2 + 1)) = n * (134 986 op.)
+ * ==> Linear complexity
+ */
 void ia_algo2() {
   int algo2_list_size = algo2.candidate_word_list.size;
 
@@ -961,6 +985,15 @@ void ia_algo2() {
 }
 
 /** The algorithm 3 which plays with intersection of candidate_word_list of algo1 & 2 to have its own list.
+ * global complexity in worst case : if there is n words in algo1 & algo2 & algo3 from last turn & have the exact same words
+ * n : word remained by last turn
+ *  + (50 * 2 + 1) : copy 50 concepts, 50 scores & value of word in temporary variable
+ * n : word remained by last turn
+ *  + (50 * 2 + 1) : copy 50 concepts, 50 scores & value of word in temporary variable
+ * n : word remained by last turn
+ *  + (50 * 2 + 1) : copy back to algo2 list of word : 50 concepts, 50 scores & value
+ * = n * (3 * (50 * 2 + 1)) = n * (303 op.)
+ * ==> Linear complexity
  */
 void ia_algo3() {
   struct algo_data* smaller;
@@ -973,8 +1006,6 @@ void ia_algo3() {
     bigger = &algo2;
     smaller = &algo1;
   }
-
-  int smaller_size = smaller->candidate_word_list.size;
 
   struct list_word intersection_of_candidate_word;
   intersection_of_candidate_word.size = 0;
@@ -1003,7 +1034,6 @@ void ia_algo3() {
     bigger_lw = &algo3.candidate_word_list;
   }
 
-  smaller_size = smaller_lw->size;
   struct list_word final_inter_of_candidate_word;
   final_inter_of_candidate_word.size = 0;
 

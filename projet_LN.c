@@ -1145,6 +1145,8 @@ int main() {
 
         print_decision();
         get_turn_infos();
+        fprintf(stderr, "-- %d |-_-| %d--\n", goddess.p.lower, goddess.p.upper);
+        fflush(stderr);
       }
       game.state.turn++;
     }
